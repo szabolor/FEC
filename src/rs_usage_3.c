@@ -11,7 +11,7 @@
   Padding: 95 symbol zeros at the beginning of the data
            must not transmit, mutually agreed values
  
-  Compile with: `gcc -o usage_3 usage_3.c ../encode_rs_8.o ../decode_rs_8.o ../librs.a`
+  Compile with: `gcc -o rs_usage_3 rs_usage_3.c ../fec-3.0.1/libfec.a`
  */
 
 int main() {

@@ -6,7 +6,7 @@
 #include "../fec-3.0.1/ccsds.h"
 
 /*
-  Compile with: `gcc -o usage_2 usage_2.c ../encode_rs_8.o ../decode_rs_8.o ../librs.a`
+  Compile with: `gcc -o rs_usage_2 rs_usage_2.c ../fec-3.0.1/libfec.a`
  */
 
 int main() {

@@ -5,6 +5,10 @@
 #include "../fec-3.0.1/fixed.h"
 #include "../fec-3.0.1/ccsds.h"
 
+/*
+  Compile with: `gcc -o rs_usage_1 rs_usage_1.c ../fec-3.0.1/libfec.a`
+ */
+
 int ccsds_1(int trials) {
   #define VERY_VERBOSE 0
 
