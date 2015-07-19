@@ -59,7 +59,7 @@ int main(int argc,char *argv[]){
 #else
   while((d = getopt(argc,argv,"l:n:te:g:vapmst")) != EOF){
 #endif
-    switch(d){
+    switch(d) {
     case 'a':
       Cpu_mode = ALTIVEC;
       break;
@@ -113,13 +113,17 @@ int main(int argc,char *argv[]){
     for(tr=0;tr<trials;tr++){
       /* Encode a frame of random data */
       for(i=0;i<framebits+6;i++){
-	int bit = (i < framebits) ? (random() & 1) : 0;
-	
-	sr = (sr << 1) | bit;
-	bits[i/8] = sr & 0xff;
-	symbols[2*i+0] = addnoise(parity(sr & V27POLYA),gain,Gain,127.5,255);
-	symbols[2*i+1] = addnoise(parity(sr & V27POLYB),gain,Gain,127.5,255);
+        int bit = (i < framebits) ? (random() & 1) : 0;
+        
+        sr = (sr << 1) | bit;
+        bits[i/8] = sr & 0xff;
+        symbols[2*i+0] = addnoise(parity(sr & V27POLYA),gain,Gain,127.5,255);
+        symbols[2*i+1] = addnoise(parity(sr & V27POLYB),gain,Gain,127.5,255);
+
+        //printf("\nparity: %d\t", parity(sr & V27POLYB));
+        //printf("noise: %d\n", addnoise(parity(sr & V27POLYB),gain,Gain,127.5,255));
       }
+
       /* Decode it and make sure we get the right answer */
       /* Initialize Viterbi decoder */
       init_viterbi27(vp,0);
@@ -131,31 +135,31 @@ int main(int argc,char *argv[]){
       chainback_viterbi27(vp,data,framebits,0);
       errcnt = 0;
       for(i=0;i<framebits/8;i++){
-	int e = Bitcnt[xordata[i] = data[i] ^ bits[i]];
-	errcnt += e;
-	tot_errs += e;
+        int e = Bitcnt[xordata[i] = data[i] ^ bits[i]];
+        errcnt += e;
+        tot_errs += e;
       }
       if(errcnt != 0)
-	badframes++;
+        badframes++;
       if(Verbose > 1 && errcnt != 0){
-	printf("frame %d, %d errors: ",tr,errcnt);
-	for(i=0;i<framebits/8;i++){
-	  printf("%02x",xordata[i]);
-	}
-	printf("\n");
+        printf("frame %d, %d errors: ",tr,errcnt);
+        for(i=0;i<framebits/8;i++){
+          printf("%02x",xordata[i]);
+        }
+        printf("\n");
       }
       if(Verbose)
-	printf("BER %lld/%lld (%10.3g) FER %d/%d (%10.3g)\r",
-	       tot_errs,(long long)framebits*(tr+1),tot_errs/((double)framebits*(tr+1)),
-	       badframes,tr+1,(double)badframes/(tr+1));
+        printf("BER %lld/%lld (%10.3g) FER %d/%d (%10.3g)\r",
+               tot_errs,(long long)framebits*(tr+1),tot_errs/((double)framebits*(tr+1)),
+               badframes,tr+1,(double)badframes/(tr+1));
       fflush(stdout);
     }
     if(Verbose > 1)
       printf("nframes = %d framesize = %d ebn0 = %.2f dB gain = %g\n",trials,framebits,ebn0,Gain);
     else if(Verbose == 0)
       printf("BER %lld/%lld (%.3g) FER %d/%d (%.3g)\n",
-	     tot_errs,(long long)framebits*trials,tot_errs/((double)framebits*trials),
-	     badframes,tr+1,(double)badframes/(tr+1));
+             tot_errs,(long long)framebits*trials,tot_errs/((double)framebits*trials),
+             badframes,tr+1,(double)badframes/(tr+1));
     else
       printf("\n");
 
@@ -177,7 +181,7 @@ int main(int argc,char *argv[]){
     getrusage(RUSAGE_SELF,&finish);
     extime = finish.ru_utime.tv_sec - start.ru_utime.tv_sec + 1e-6*(finish.ru_utime.tv_usec - start.ru_utime.tv_usec);
     printf("Execution time for %d %d-bit frames: %.2f sec\n",trials,
-	   framebits,extime);
+           framebits,extime);
     printf("decoder speed: %g bits/s\n",trials*framebits/extime);
   }
   exit(0);
