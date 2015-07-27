@@ -1,0 +1,16 @@
+ Performance counter stats for './ref_encoder':
+
+          2,334766      task-clock (msec)         #    0,639 CPUs utilized          
+                33      context-switches          #    0,014 M/sec                  
+                 1      cpu-migrations            #    0,428 K/sec                  
+                46      page-faults               #    0,020 M/sec                  
+         1.866.142      cycles                    #    0,799 GHz                    
+           979.656      stalled-cycles-frontend   #   52,50% frontend cycles idle   
+           573.725      stalled-cycles-backend    #   30,74% backend  cycles idle   
+         2.046.598      instructions              #    1,10  insns per cycle        
+                                                  #    0,48  stalled cycles per insn
+           364.610      branches                  #  156,166 M/sec                  
+     <not counted>      branch-misses              (0,00%)
+
+       0,003653915 seconds time elapsed
+

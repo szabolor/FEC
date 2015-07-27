@@ -1,0 +1,201 @@
+desc: --pages-as-heap=yes
+cmd: ./ref_encoder
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=8192
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=0
+mem_heap_B=12288
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=0
+mem_heap_B=151552
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=0
+mem_heap_B=159744
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=0
+mem_heap_B=163840
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=0
+mem_heap_B=167936
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=0
+mem_heap_B=172032
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=0
+mem_heap_B=180224
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=0
+mem_heap_B=184320
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=0
+mem_heap_B=184320
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=detailed
+n1: 184320 (page allocation syscalls) mmap/mremap/brk, --alloc-fns, etc.
+ n0: 184320 0xFFFFFFFFFFFFFFFF: ???
+#-----------
+snapshot=10
+#-----------
+time=6259
+mem_heap_B=2289664
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=11
+#-----------
+time=6349
+mem_heap_B=2297856
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=8970
+mem_heap_B=2539520
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=11569
+mem_heap_B=2543616
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=14
+#-----------
+time=12220
+mem_heap_B=6352896
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=12291
+mem_heap_B=6377472
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=14626
+mem_heap_B=6393856
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=19442
+mem_heap_B=6397952
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=101979
+mem_heap_B=6160384
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=peak
+n2: 6160384 (page allocation syscalls) mmap/mremap/brk, --alloc-fns, etc.
+ n2: 5976064 0x40183A9: mmap (in /usr/lib/ld-2.21.so)
+  n1: 5914624 0x40065CE: _dl_map_object_from_fd (in /usr/lib/ld-2.21.so)
+   n2: 5914624 0x4008544: _dl_map_object (in /usr/lib/ld-2.21.so)
+    n1: 3809280 0x400CA60: openaux (in /usr/lib/ld-2.21.so)
+     n1: 3809280 0x400EF92: _dl_catch_error (in /usr/lib/ld-2.21.so)
+      n1: 3809280 0x400CCC2: _dl_map_object_deps (in /usr/lib/ld-2.21.so)
+       n1: 3809280 0x400304C: dl_main (in /usr/lib/ld-2.21.so)
+        n1: 3809280 0x401643E: _dl_sysdep_start (in /usr/lib/ld-2.21.so)
+         n1: 3809280 0x4004D88: _dl_start (in /usr/lib/ld-2.21.so)
+          n0: 3809280 0x4000D86: ??? (in /usr/lib/ld-2.21.so)
+    n1: 2105344 0x4000F63: map_doit (in /usr/lib/ld-2.21.so)
+     n1: 2105344 0x400EF92: _dl_catch_error (in /usr/lib/ld-2.21.so)
+      n1: 2105344 0x4000BCD: do_preload (in /usr/lib/ld-2.21.so)
+       n1: 2105344 0x4003580: dl_main (in /usr/lib/ld-2.21.so)
+        n1: 2105344 0x401643E: _dl_sysdep_start (in /usr/lib/ld-2.21.so)
+         n1: 2105344 0x4004D88: _dl_start (in /usr/lib/ld-2.21.so)
+          n0: 2105344 0x4000D86: ??? (in /usr/lib/ld-2.21.so)
+  n0: 61440 in 4 places, all below massif's threshold (01.00%)
+ n0: 184320 0xFFFFFFFFFFFFFFFF: ???
+#-----------
+snapshot=19
+#-----------
+time=101979
+mem_heap_B=6156288
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=820215
+mem_heap_B=6160384
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=21
+#-----------
+time=1425840
+mem_heap_B=6156288
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
