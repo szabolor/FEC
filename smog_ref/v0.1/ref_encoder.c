@@ -4,6 +4,9 @@
  * This software may be used under the terms of the GNU Public License (GPL)
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #define SYNC_POLY 0x48      /* Sync vector polynomial */
 #define SCRAMBLER_POLY 0x95 /* Scrambler polynomial */
 #define CPOLYA 0x4f         /* First convolutional encoder polynomial */
@@ -55,6 +58,13 @@ static unsigned char Conv_sr;
  */
 unsigned char Interleaver[650];
 
+int convolutional_counter = 0;
+int convolutional_bit = 0;
+unsigned char convolutional_code[650];
+
+unsigned char reedsolomon_code[320];
+int reedsolomon_counter = 0;
+
 /* Internal functions */
 
 /* Reduce argument modulo 255 without a divide
@@ -83,6 +93,20 @@ static inline int parity(int x){
  *  and update the pointers 
  */
 static void interleave_symbol(int c){
+  
+  // Save Convolution
+  if(c)
+    convolutional_code[convolutional_counter] |= convolutional_bit;
+  else
+    convolutional_code[convolutional_counter] &= ~convolutional_bit;
+  convolutional_bit >>= 1;
+  if (convolutional_bit == 0) {
+    convolutional_bit = 0x80;
+    ++convolutional_counter;
+  }
+  
+  
+  
   if(c)
     Interleaver[Bindex] |= Bmask;
   else
@@ -116,6 +140,9 @@ static void encode_and_interleave(unsigned char c,int cnt){
 static void scramble_and_encode(unsigned char c){
   int i;
 
+  // Save Reed-Solomon code separately
+  reedsolomon_code[reedsolomon_counter++] = c;
+  
   /* Scramble byte */
   c ^= Scrambler;
   /* Update scrambler
@@ -138,8 +165,9 @@ void reset_encoder(void){
 
   Nbytes = 0;
   Conv_sr = 0;
-  Scrambler = 0xff;
-  Bmask = 0x40;
+  //Scrambler = 0xff;
+  Scrambler = 0; // bypass scrambling bits :D
+  Bmask = 0x40; // first bits are SYNC bits (thus omit the first bits from every 10th byte)
   Bindex = 0;
 
   for(j=0;j<2;j++)
@@ -173,8 +201,9 @@ void init_encoder(void){
   /* Generate sync vector here, place into Interleaver */
   sr = 0x7f;
   for(i=0;i<65;i++){
-    if(sr & 64)
+    if(sr & 64) {
       Interleaver[10*i] |= 0x80; /* Every 80th bit is a sync bit */
+    }
     sr = (sr << 1) | parity(sr & SYNC_POLY);
   }
   reset_encoder();
@@ -258,8 +287,11 @@ int main() {
   static int test_message_len = 46;
   static char test_message[] = "SMOG telemetry test message v0.1 - 2015.07.27.";
   char data[256];
-  int i, j;
+  int i, j, k;
+  unsigned char tmp = 0, count = 0; 
+  FILE *fp;
 
+  // Fill buffer with data
   for (i = 0; i < 256; ++i) {
     if (i < test_message_len) {
       data[i] = test_message[i];
@@ -268,19 +300,25 @@ int main() {
     }
   }
 
+  // Initialization parts
   init_encoder();
   reset_encoder();
 
+  // Encoding data
   for (i = 0; i < 256; ++i) {
     encode_byte(data[i]);
   }
 
+  // Encoding parity
   for (i = 0; i < 64; ++i) {
     encode_parity();
   }
 
-  /* Print data */
-  printf("Data:\n");
+  // Original data
+  fp = fopen("enc_data", "wb");
+  fwrite(data, sizeof(char), sizeof(data), fp);
+  fclose(fp);
+  printf("Data: [%d bytes]\n", DATA_LENGTH);
   for (i = 0; i <= (DATA_LENGTH-1) / ROW_LENGTH; ++i) {
     for (j = 0; j < ROW_LENGTH; ++j) {
       if (j + i * ROW_LENGTH < DATA_LENGTH) {
@@ -292,9 +330,46 @@ int main() {
     printf("\n");
   }
   printf("\n");
+  
+  // Reed-Solomon data
+  fp = fopen("enc_rs", "wb");
+  fwrite(reedsolomon_code, sizeof(char), sizeof(reedsolomon_code), fp);
+  fclose(fp);
+  printf("Reed-Solomon encoded data:  [%d bytes]\n", reedsolomon_counter);
+  for (i = 0; i <= (reedsolomon_counter - 1) / ROW_LENGTH; ++i) {
+    for (j = 0; j < ROW_LENGTH; ++j) {
+      if (j + i * ROW_LENGTH < reedsolomon_counter) {
+        printf("%02x ", reedsolomon_code[j + i * ROW_LENGTH]);
+      } else {
+        break;
+      }
+    }
+    printf("\n");
+  }
+  printf("\n");
+  
+  /* Print convolutional code data */
+  fp = fopen("enc_conv", "wb");
+  fwrite(convolutional_code, sizeof(char), sizeof(convolutional_code), fp);
+  fclose(fp);
+  printf("Convolution encoded:  [%d bytes]\n", convolutional_counter);
+  for (i = 0; i <= (convolutional_counter - 1) / ROW_LENGTH; ++i) {
+    for (j = 0; j < ROW_LENGTH; ++j) {
+      if (j + i * ROW_LENGTH < convolutional_counter) {
+        printf("%02x ", convolutional_code[j + i * ROW_LENGTH]);
+      } else {
+        break;
+      }
+    }
+    printf("\n");
+  }
+  printf("\n");
 
-  /* Print encoded stream data on channel */
-  printf("Channel:\n");
+  /* Print interleaved stream data */
+  fp = fopen("enc_interleaved", "wb");
+  fwrite(Interleaver, sizeof(char), sizeof(Interleaver), fp);
+  fclose(fp);
+  printf("Channel: [%d bytes]\n", CHANNEL_LENGTH);
   for (i = 0; i <= (CHANNEL_LENGTH-1) / ROW_LENGTH; ++i) {
     for (j = 0; j < ROW_LENGTH; ++j) {
       if (j + i * ROW_LENGTH < CHANNEL_LENGTH) {
@@ -306,6 +381,19 @@ int main() {
     printf("\n");
   }
   printf("\n");
-
+  
+  
+  // Print voltage-translated fec data, where 0=>50 and 1=>200
+  fp = fopen("fec", "wb");
+  for (i = 0; i < CHANNEL_LENGTH; ++i) {
+    for (j = 0; j < 8; ++j) {
+      tmp = ( Interleaver[i] & ( 1 << j ) ) ? 1 : 0;
+      tmp *= 150;
+      tmp += 50;
+      fwrite(&tmp, 1, 1, fp);
+    }
+  }
+  fclose(fp);
+  
   return 0;
 }
