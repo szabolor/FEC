@@ -5,20 +5,21 @@
 #define MAXBYTES (10000)
 #define SEED (1)
 /*
-  Compile with: `gcc -o vit_usage_1 vit_usage_1.c ../fec-3.0.1/libfec.a`
+  Compile with: `gcc -o vit_usage_2 vit_usage_2.c ../fec-3.0.1/libfec.a`
  */
 
-#define CPOLYA 0x4f
-#define CPOLYB 0x6d 
+#define CPOLYA 0x4f // V27POLYB
+#define CPOLYB 0x6d // V27POLYA
 
 int main() {
   int i, j;
   void *vp;   
   int bit;    
+  unsigned char swap;
   int sr = 0; 
   int framebits = 2560; 
 
-  unsigned char symbols[2560*2+6];
+  unsigned char symbols[8*2*(MAXBYTES+6)];
   unsigned char encoded[320];
   unsigned char data[320];
   unsigned char enc_rs[] = {
@@ -62,9 +63,18 @@ int main() {
 
     //symbols[2*i+0] = addnoise(parity(sr & V27POLYA),gain,Gain,127.5,255);
     //symbols[2*i+1] = addnoise(parity(sr & V27POLYB),gain,Gain,127.5,255);
-    symbols[2*i+0] = parity(sr & CPOLYB) ? 200 : 50;
-    symbols[2*i+1] = (parity(sr & CPOLYA)) ? 200 : 50;
-  }
+    symbols[2*i+0] = (parity(sr & CPOLYA)) ? 200 : 50;
+    symbols[2*i+1] = (!parity(sr & CPOLYB)) ? 200 : 50;
+
+    // Descramble bits:
+    swap = symbols[2*i+1];
+    symbols[2*i+1] = symbols[2*i+0];
+    symbols[2*i+0] = 250 - swap; // invert
+}
+
+  fp = fopen("vit_symbols", "wb");
+  fwrite(symbols, 1, sizeof(symbols), fp);
+  fclose(fp);
 
   for (i = 0; i < framebits; ++i) {
     encoded[i/8] |= (symbols[i] > 128) ? 1 : 0;

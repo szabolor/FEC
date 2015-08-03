@@ -59,7 +59,7 @@ static unsigned char Conv_sr;
 unsigned char Interleaver[650];
 
 int convolutional_counter = 0;
-int convolutional_bit = 0;
+int convolutional_bit = 0x80;
 unsigned char convolutional_code[650];
 
 unsigned char reedsolomon_code[320];
@@ -99,6 +99,7 @@ static void interleave_symbol(int c){
     convolutional_code[convolutional_counter] |= convolutional_bit;
   else
     convolutional_code[convolutional_counter] &= ~convolutional_bit;
+
   convolutional_bit >>= 1;
   if (convolutional_bit == 0) {
     convolutional_bit = 0x80;
@@ -298,6 +299,10 @@ int main() {
     } else {
       data[i] = 0;
     }
+  }
+
+  for (i = 0; i < 650; ++i) {
+    convolutional_code[i] = 0;
   }
 
   // Initialization parts
