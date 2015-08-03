@@ -225,31 +225,31 @@ void delete_viterbi615_port(void *p);
 int update_viterbi615_blk_port(void *p,unsigned char *syms,int nbits);
 
 
-/* General purpose RS codec, 8-bit symbols */
-void encode_rs_char(void *rs,unsigned char *data,unsigned char *parity);
-int decode_rs_char(void *rs,unsigned char *data,int *eras_pos,
-		   int no_eras);
-void *init_rs_char(int symsize,int gfpoly,
-		   int fcr,int prim,int nroots,
-		   int pad);
-void free_rs_char(void *rs);
+// /* General purpose RS codec, 8-bit symbols */
+// void encode_rs_char(void *rs,unsigned char *data,unsigned char *parity);
+// int decode_rs_char(void *rs,unsigned char *data,int *eras_pos,
+// 		   int no_eras);
+// void *init_rs_char(int symsize,int gfpoly,
+// 		   int fcr,int prim,int nroots,
+// 		   int pad);
+// void free_rs_char(void *rs);
 
-/* General purpose RS codec, integer symbols */
-void encode_rs_int(void *rs,int *data,int *parity);
-int decode_rs_int(void *rs,int *data,int *eras_pos,int no_eras);
-void *init_rs_int(int symsize,int gfpoly,int fcr,
-		  int prim,int nroots,int pad);
-void free_rs_int(void *rs);
+// /* General purpose RS codec, integer symbols */
+// void encode_rs_int(void *rs,int *data,int *parity);
+// int decode_rs_int(void *rs,int *data,int *eras_pos,int no_eras);
+// void *init_rs_int(int symsize,int gfpoly,int fcr,
+// 		  int prim,int nroots,int pad);
+// void free_rs_int(void *rs);
 
-/* CCSDS standard (255,223) RS codec with conventional (*not* dual-basis)
- * symbol representation
- */
-void encode_rs_8(unsigned char *data,unsigned char *parity,int pad);
-int decode_rs_8(unsigned char *data,int *eras_pos,int no_eras,int pad);
+// /* CCSDS standard (255,223) RS codec with conventional (*not* dual-basis)
+//  * symbol representation
+//  */
+// void encode_rs_8(unsigned char *data,unsigned char *parity,int pad);
+// int decode_rs_8(unsigned char *data,int *eras_pos,int no_eras,int pad);
 
-/* CCSDS standard (255,223) RS codec with dual-basis symbol representation */
-void encode_rs_ccsds(unsigned char *data,unsigned char *parity,int pad);
-int decode_rs_ccsds(unsigned char *data,int *eras_pos,int no_eras,int pad);
+// /* CCSDS standard (255,223) RS codec with dual-basis symbol representation */
+// void encode_rs_ccsds(unsigned char *data,unsigned char *parity,int pad);
+// int decode_rs_ccsds(unsigned char *data,int *eras_pos,int no_eras,int pad);
 
 /* Tables to map from conventional->dual (Taltab) and
  * dual->conventional (Tal1tab) bases

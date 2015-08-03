@@ -21,6 +21,8 @@
 #include <stdlib.h>    /* for: calloc  free */
 #include <string.h>    /* for: memset  memmove  memcpy */
 
+#include "fec-lib/fec.h"
+
 #define Verbose 1      /* Permit some diagnostics; use 0 for none */
 
 /* Defines for RS Decoder(s) */
@@ -418,7 +420,7 @@ unsigned char RS_block[RSBLOCKS][NROOTS]; /* RS parity blocks */
 unsigned char reencode[SYMPBLOCK] ;       /* Re-encoded symbols */
 
 int convolutional_counter = 0;
-int convolutional_bit = 0;
+int convolutional_bit = 0x80;
 unsigned char convolutional_code[650];
 
 static unsigned char RS_poly[] = {
@@ -651,10 +653,13 @@ void rs_test() {
 
 void conv_test() {
   FILE* fp;
+  int framebits = 2560;
   unsigned char symb_byte[650];
-  unsigned char symbols[5132];
+  unsigned char symbols[5200];
   unsigned char vitdecdata[320];
   int i;
+  unsigned char swap;
+  void *vp;
 
   fp = fopen("enc_conv", "rb");
   fread(symb_byte, 1, sizeof(symb_byte), fp);
@@ -664,14 +669,28 @@ void conv_test() {
     symbols[i] = (symb_byte[i / 8] & ( 1 << ( 7 - (i & 0x07) ))) ? 200 : 50;
   }
 
-  fp=fopen("dec_conv_debug", "wb");                       /* Output 256 bytes of user's data */
-  fwrite(symbols,1,sizeof(symbols),fp);
+  for (i = 0; i < 2600; ++i) {    
+    swap = symbols[2*i+1];
+    symbols[2*i+1] = symbols[2*i+0];
+    symbols[2*i+0] = 250 - swap; // invert
+  }
+
+  fp=fopen("dec_conv_debug", "wb");
+  fwrite(symbols, 1, sizeof(symbols), fp);
   fclose(fp);
 
-  viterbi27(vitdecdata, symbols, 2566);
+  //viterbi27(vitdecdata, symbols, 2566);
 
-  fp=fopen("dec_conv", "wb");                       /* Output 256 bytes of user's data */
-  fwrite(vitdecdata,1,sizeof(vitdecdata),fp);
+  if ((vp = create_viterbi27(framebits)) == NULL) {
+    printf("create_viterbi27 failed\n");
+    exit(1);
+  }
+  i = init_viterbi27(vp, 0);
+  i = update_viterbi27_blk(vp, symbols, framebits + 6);
+  i = chainback_viterbi27(vp, vitdecdata, framebits, 0);
+
+  fp=fopen("dec_conv", "wb");
+  fwrite(vitdecdata, 1, sizeof(vitdecdata), fp);
   fclose(fp);
 }
 
@@ -764,13 +783,13 @@ void fec_generate_test() {
 int main()
 {
   // rs_test();
-  conv_test();
+  // conv_test();
+  // fec_generate_test();
 
 
   // conv_encode_test();
-  //fec_generate_test();
 
-  //return 0;
+  // return 0;
 
         unsigned char raw[SYMPBLOCK] ;           /* 5200 raw received;  sync+symbols  */
         unsigned char symbols[NBITS*2+65+3] ;    /* de-interleaved sync+symbols */
@@ -804,9 +823,33 @@ int main()
 /* Step 2: Viterbi decoder */
 /* ----------------------- */
       {
-        /* Input  array:  symbols  */
-        /* Output array:  vitdecdata */
-        viterbi27(vitdecdata,symbols,NBITS);
+        void *vp;
+        int framebits = 2560;
+        unsigned char swap;
+        int i;
+        FILE *fp;
+
+        // /* Input  array:  symbols  */
+        // /* Output array:  vitdecdata */
+        // viterbi27(vitdecdata,symbols,NBITS);
+
+        for (i = 0; i < 5132 / 2; ++i) {    
+          swap = symbols[2*i+1];
+          symbols[2*i+1] = symbols[2*i+0];
+          symbols[2*i+0] = ~swap; // invert
+        }
+
+        if ((vp = create_viterbi27(framebits)) == NULL) {
+          printf("create_viterbi27 failed\n");
+          exit(1);
+        }
+        i = init_viterbi27(vp, 0);
+        i = update_viterbi27_blk(vp, symbols, framebits + 6);
+        i = chainback_viterbi27(vp, vitdecdata, framebits, 0);
+
+        fp=fopen("dec_conv", "wb");
+        fwrite(vitdecdata, 1, sizeof(vitdecdata), fp);
+        fclose(fp);
       }
 
 /* Steps 3: RS decoder */
@@ -844,7 +887,8 @@ int main()
         si = 0;
         for(col=RSPAD;col<NN;col++){
           for(row=0;row<RSBLOCKS;row++){
-            rsblocks[row][col] = vitdecdata[di++] ^ Scrambler[si++];  /* Remove scrambling */
+            // rsblocks[row][col] = vitdecdata[di++] ^ Scrambler[si++];  /* Remove scrambling */
+            rsblocks[row][col] = vitdecdata[di++];
           }
         }
         /* Run RS-decoder(s) */
