@@ -460,7 +460,7 @@ static void encode_and_interleave(unsigned char c,int cnt){
 
 /* Scramble a byte, convolutionally encode and interleave into frame */
 static void scramble_and_encode(unsigned char c){
-  // c ^= Scrambler[Nbytes];      /* Scramble byte */
+   c ^= Scrambler[Nbytes];      /* Scramble byte */
   encode_and_interleave(c,8);  /* RS encode and place into reencode buffer */
 }
 
@@ -887,8 +887,8 @@ int main()
         si = 0;
         for(col=RSPAD;col<NN;col++){
           for(row=0;row<RSBLOCKS;row++){
-            // rsblocks[row][col] = vitdecdata[di++] ^ Scrambler[si++];  /* Remove scrambling */
-            rsblocks[row][col] = vitdecdata[di++];
+            rsblocks[row][col] = vitdecdata[di++] ^ Scrambler[si++];  /* Remove scrambling */
+            // rsblocks[row][col] = vitdecdata[di++];
           }
         }
         /* Run RS-decoder(s) */
