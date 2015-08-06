@@ -140,12 +140,13 @@ static void encode_and_interleave(unsigned char c,int cnt){
 /* Internal function to scramble a byte, convolutionally encode and block interleave */
 static void scramble_and_encode(unsigned char c){
   int i;
+ 
+  /* Scramble byte */
+  c ^= Scrambler;
 
   // Save Reed-Solomon code separately
   reedsolomon_code[reedsolomon_counter++] = c;
-  
-  /* Scramble byte */
-  c ^= Scrambler;
+
   /* Update scrambler
    * It might be more efficient to use the Galois form of the PN generator
    * instead of the Fibonacci form if the parity function is not fast.
@@ -166,8 +167,8 @@ void reset_encoder(void){
 
   Nbytes = 0;
   Conv_sr = 0;
-  //Scrambler = 0xff;
-  Scrambler = 0; // bypass scrambling bits :D
+  Scrambler = 0xff;
+  //Scrambler = 0; // bypass scrambling bits :D
   Bmask = 0x40; // first bits are SYNC bits (thus omit the first bits from every 10th byte)
   Bindex = 0;
 
@@ -390,13 +391,9 @@ int main() {
   
   // Print voltage-translated fec data, where 0=>50 and 1=>200
   fp = fopen("fec", "wb");
-  for (i = 0; i < CHANNEL_LENGTH; ++i) {
-    for (j = 0; j < 8; ++j) {
-      tmp = ( Interleaver[i] & ( 1 << j ) ) ? 1 : 0;
-      tmp *= 150;
-      tmp += 50;
-      fwrite(&tmp, 1, 1, fp);
-    }
+  for (i = 0; i < 650 * 8; ++i) {
+    tmp = (Interleaver[i >> 3] & (1 << (7 - (i & 7)))) ? 200 : 50;
+    fwrite(&tmp, 1, sizeof(tmp), fp);
   }
   fclose(fp);
   
