@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#define LOW_MEMORY 0 // set memory workarounds to keep the footprint low...
+#define LOW_MEMORY 1 // set memory workarounds to keep the footprint low...
 
 #if (LOW_MEMORY == 0)
 #define INDEX_OF(x) ( Index_of[ (x) ] )
@@ -18,8 +18,8 @@
 
 #define SYNC_POLY      0x48
 #define SCRAMBLER_POLY 0x95
-#define CPOLYA         0x4f
-#define CPOLYB         0x6d
+#define CPOLYA         0x4f // 79
+#define CPOLYB         0x6d // 109
 #define GF_POLY        0x187
 #define A0             255
 
@@ -37,7 +37,7 @@ static uint8_t Scrambler;
 static uint8_t Conv_sr;
 uint8_t *Interleaver;
 
-uint8_t index_of_func(uint8_t x) {
+static inline uint8_t index_of_func(uint8_t x) {
   uint16_t sr = 1;
   uint8_t i = 0;
 
@@ -55,7 +55,7 @@ uint8_t index_of_func(uint8_t x) {
   return i;
 }
 
-uint8_t alpha_to_func(uint8_t x) {
+static inline uint8_t alpha_to_func(uint8_t x) {
   uint16_t sr = 1;
   uint8_t i;
 
@@ -86,16 +86,16 @@ static inline uint8_t parity(uint8_t x){
 }
 
 static void interleave_symbol(uint8_t c){
-  if(c)
+  if (c)
     Interleaver[Bindex] |= Bmask;
   else
     Interleaver[Bindex] &= ~Bmask;
 
   Bindex += 10;
-  if(Bindex >= 650){
+  if (Bindex >= 650){
     Bindex -= 650;
     Bmask >>= 1;
-    if(Bmask == 0){
+    if (Bmask == 0){
       Bmask = 0x80;
       ++Bindex;
     }
@@ -122,16 +122,16 @@ static void scramble_and_encode(uint8_t c){
 
 void reset_encoder(void){
   uint8_t i;
-  uint8_t j;
 
   Nbytes = 0;
   Conv_sr = 0;
   Scrambler = 0xff;
   Bmask = 0x40;
   Bindex = 0;
-  for(j=0;j<2;j++)
-    for(i=0;i<32;i++)
-      RS_block[j][i] = 0;
+  for(i=0;i<32;i++) {
+    RS_block[0][i] = 0;
+    RS_block[1][i] = 0;
+  }
 }
 
 void init_encoder(void){
@@ -168,7 +168,6 @@ void init_encoder(void){
 void encode_byte(uint8_t c){
   uint8_t *rp;
   uint8_t i;
-  uint8_t j;
   uint8_t feedback;
   uint8_t t;
 
@@ -176,10 +175,10 @@ void encode_byte(uint8_t c){
   feedback = INDEX_OF(c ^ rp[0]);
   
   if (feedback != A0){
-    for (j = 0; j < 15; ++j) {
-      t = ALPHA_TO(mod255(feedback + RS_poly[j]));
-      rp[j+1] ^= t;
-      rp[31-j] ^= t;
+    for (i = 0; i < 15; ++i) {
+      t = ALPHA_TO(mod255(feedback + RS_poly[i]));
+      rp[i+1] ^= t;
+      rp[31-i] ^= t;
     }
     rp[16] ^= ALPHA_TO(mod255(feedback + RS_poly[15]));
   }

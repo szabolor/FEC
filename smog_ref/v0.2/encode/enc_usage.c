@@ -19,7 +19,7 @@ int main() {
   for (i = 0; i < message_len; ++i)
     data[i] = message[i];
 
-  encode_data(&data, &encoded);
+  encode_data(data, encoded);
 
 #if (SAVE_TO_FILE > 0)
   fp = fopen("test_enc", "wb");
