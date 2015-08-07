@@ -28,7 +28,7 @@ static uint8_t Index_of[256];
 static uint8_t Alpha_to[256];
 #endif
 
-static uint8_t RS_poly[] = {249,59,66,4,43,126,251,97,30,3,213,50,66,170,5,24};
+const uint8_t RS_poly[] = {249,59,66,4,43,126,251,97,30,3,213,50,66,170,5,24};
 uint8_t RS_block[2][32];
 static uint16_t Nbytes;
 static uint8_t Bmask;
@@ -198,7 +198,7 @@ void encode_byte(uint8_t c){
 void encode_parity(void){
   uint8_t c;
 
-  c =  RS_block[Nbytes & 1][(Nbytes - 256) >> 1];
+  c =  RS_block[Nbytes & 1][(Nbytes >> 1) - 128];
   scramble_and_encode(c);
   if (++Nbytes == 320) {
     encode_and_interleave(0, 6);
