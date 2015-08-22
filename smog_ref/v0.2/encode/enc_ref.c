@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#define LOW_MEMORY 1 // set memory workarounds to keep the footprint low...
+#define LOW_MEMORY 0 // set memory workarounds to keep the footprint low...
 
 #if (LOW_MEMORY == 0)
 #define INDEX_OF(x) ( Index_of[ (x) ] )
@@ -155,9 +155,10 @@ void init_encoder(void){
   for (sr = 0; sr < 650; ++sr)   // sr is used because its 16bit width
     Interleaver[sr] = 0;         // to preserve memory
   
+  // TODO: write a little script for this to get the output
   sr = 0x7f;
   for (i = 0; i < 65; ++i) {
-    if(sr & 64) {
+    if(sr & 64) { // TODO: 0x40
       Interleaver[10*i] |= 0x80;
     }
     sr = (sr << 1) | parity(sr & SYNC_POLY);
