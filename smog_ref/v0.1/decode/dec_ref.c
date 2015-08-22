@@ -817,6 +817,10 @@ int main()
           }
           coltop+=COLUMNS;
         }
+
+        fp=fopen("dec_deinterleave", "wb");
+        fwrite(symbols, 1, sizeof(symbols), fp);
+        fclose(fp);
       } /* end of de-interleaving */
 
 
@@ -891,6 +895,10 @@ int main()
             // rsblocks[row][col] = vitdecdata[di++];
           }
         }
+        fp=fopen("dec_rs","wb");                       /* Output 256 bytes of user's data */
+        fwrite(rsblocks,1,sizeof(rsblocks),fp);
+        fclose(fp);
+
         /* Run RS-decoder(s) */
         rs_failures = 0;
         for(row=0;row<RSBLOCKS;row++){
