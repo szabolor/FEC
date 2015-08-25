@@ -24,12 +24,6 @@ static uint32_t syndrome(uint32_t cw) {
   return (cw << 12);      /* value pairs with upper bits of cw */
 }
 
-uint32_t golay_encode(uint32_t cw) {
-  cw &= DATA_MASK; // maybe unnecessary, data side validation also made (* to be make)
-
-  return ( syndrome(cw) | cw );    /* assemble codeword */
-}
-
 // TODO: try with simple `x ^= x >> 2**n` for size optimization
 static inline uint8_t parity(uint32_t x) {
   x ^= x >> 1;
@@ -105,6 +99,13 @@ uint8_t golay_decode(uint32_t *cw, uint8_t *errs) {
   return parity(*cw);
 }
 
+uint32_t golay_encode(uint32_t cw) {
+  cw &= DATA_MASK; // maybe unnecessary, data side validation also made (* to be make)
+  cw |= syndrome(cw);
+  cw |= (parity(cw) << 23);
+
+  return cw;    /* assemble codeword */
+}
 /*
 int main () {
 
@@ -115,17 +116,15 @@ int main () {
   printf("data: %06x\n", data);
 
   codeword = golay_encode(data);
-  if (parity(codeword))
-    codeword |= PARITY_MASK;
 
   printf("code: %06x\n", codeword);
 
-  codeword &= ~(1 << 0);
-  codeword |= (1 << 1);
+  //codeword &= ~(1 << 0);
+  //codeword |= (1 << 1);
   //codeword &= ~(1 << 6);
 
   //codeword |= (1 << 20);
-  codeword |= (1 << 21);
+  //codeword |= (1 << 21);
   //codeword |= (1 << 22);
   printf("code with error: %06x\n", codeword);
 
@@ -138,4 +137,5 @@ int main () {
 
   return 0;
 }
+
 */
