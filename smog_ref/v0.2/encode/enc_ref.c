@@ -12,11 +12,6 @@
 #include <stdint.h>
 #include "enc_ref.h"
 
-#if (LOW_MEMORY == 0)
-
-#else
-#endif
-
 #define SYNC_POLY      0x48
 #define SCRAMBLER_POLY 0x95
 #define CPOLYA         0x4f // 79
