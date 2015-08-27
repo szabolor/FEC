@@ -1,17 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "enc_ref.h"
 
-#define SAVE_TO_FILE 0
+#define SAVE_TO_FILE 1
 
-unsigned char data[256] = {0};
-unsigned char encoded[650] = {0};
-unsigned char message[] = "AO40 test message with enc_ref";
+uint8_t data[256] = {0};
+uint8_t encoded[650] = {0};
+uint8_t message[] = "AO40 test message with enc_ref";
+uint8_t bit_encoded[5200] = {0};
 int message_len = 30;
 
 int main() {
   int i;
-  unsigned char tmp;
+  uint8_t tmp;
 #if (SAVE_TO_FILE > 0)
   FILE *fp;
 #endif
@@ -19,7 +21,7 @@ int main() {
   for (i = 0; i < message_len; ++i)
     data[i] = message[i];
 
-  encode_data(data, encoded);
+  encode_data(&data, &encoded);
 
 #if (SAVE_TO_FILE > 0)
   fp = fopen("test_enc", "wb");
@@ -31,6 +33,14 @@ int main() {
     tmp = (encoded[i >> 3] & (1 << (7 - (i & 7)))) ? 200 : 50;
     fwrite(&tmp, 1, sizeof(tmp), fp);
   }
+  fclose(fp);
+#endif
+
+#if (ENABLE_BIT_OUTPUT > 0)
+  encode_data_bit(&data, &bit_encoded);
+
+  fp = fopen("test_bit", "wb");
+  fwrite(bit_encoded, 1, sizeof(bit_encoded), fp);
   fclose(fp);
 #endif
 
