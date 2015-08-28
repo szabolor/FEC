@@ -4,6 +4,8 @@
 #include "viterbi/spiral-vit_v16-single.h"
 #include "rs/decode_rs.h"
 
+#define DEBUG 0
+
 #if DEBUG > 0
 #include <stdio.h>
 #endif
@@ -48,7 +50,7 @@ void deinterleave(uint8_t (*raw)[RAW_SIZE], uint8_t (*conv)[CONV_SIZE]) {
     if (i >= RAW_SIZE) {
       i -= (RAW_SIZE - 1);
     }
-    (*conv)[j] = (j & 1) ? ~((*raw)[i]) : (*raw)[i];
+    (*conv)[j] = (*raw)[i];
     i += 80;
     ++j;
   }
@@ -60,7 +62,6 @@ void deinterleave(uint8_t (*raw)[RAW_SIZE], uint8_t (*conv)[CONV_SIZE]) {
  */
 void viterbi(uint8_t (*conv)[CONV_SIZE], uint8_t (*dec_data)[RS_SIZE]) {
   struct v *vp;
-  uint16_t i;
 
   if((vp = create_viterbi(FRAMEBITS)) == NULL){
     printf("create_viterbi failed\n");
@@ -79,11 +80,7 @@ void descramble(uint8_t (*dec_data)[RS_SIZE], uint8_t (*rs)[2][RS_BLOCK_SIZE]) {
   uint16_t i;
   uint16_t j = 0;
 
-  for (i = 0; i < RS_PADDING; ++i) {
-    (*rs)[0][i] = 0;
-    (*rs)[1][i] = 0;
-  }
-  for (i = RS_PADDING; i < RS_BLOCK_SIZE; ++i) {
+  for (i = 0; i < RS_BLOCK_SIZE; ++i) {
     (*rs)[0][i] = (*dec_data)[j] ^ Scrambler[j];
     ++j;
     (*rs)[1][i] = (*dec_data)[j] ^ Scrambler[j];
@@ -92,16 +89,15 @@ void descramble(uint8_t (*dec_data)[RS_SIZE], uint8_t (*rs)[2][RS_BLOCK_SIZE]) {
 }
 
 void rs_decode(uint8_t (*rs)[2][RS_BLOCK_SIZE], uint8_t (*data)[DATA_SIZE], int8_t (*error)[2]) {
-  uint8_t i;
-  uint8_t j = 0;
+  uint16_t i;
 
   (*error)[0] = decode_rs_8((*rs)[0], NULL, 0);
   (*error)[1] = decode_rs_8((*rs)[1], NULL, 0);
 
-  for (i = RS_PADDING; i < (NN - NROOTS); ++i) {
-    (*data)[j++] = (*rs)[0][i];
-    (*data)[j++] = (*rs)[1][i];
+  for (i = 0; i < DATA_SIZE; ++i) {
+    (*data)[i] = (*rs)[i & 1][i >> 1];
   }
+
 }
 
 void decode_data(uint8_t (*raw)[RAW_SIZE], uint8_t (*data)[DATA_SIZE], int8_t (*error)[2]) {
@@ -127,9 +123,9 @@ void decode_data(uint8_t (*raw)[RAW_SIZE], uint8_t (*data)[DATA_SIZE], int8_t (*
   fp = fopen("debug_rs", "wb");
   fwrite(rs, sizeof(uint8_t), sizeof(rs), fp);
   fclose(fp);
-  printf("Errors: RS[0] = %d, RS[1] = %d\n", error[0], error[1]);
+  printf("Errors: RS[0] = %d, RS[1] = %d\n", (*error)[0], (*error)[1]);
   fp = fopen("debug_data", "wb");
-  fwrite(data, sizeof(uint8_t), sizeof(data), fp);
+  fwrite((*data), sizeof(uint8_t), sizeof((*data)), fp);
   fclose(fp);
 #endif
 }

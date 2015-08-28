@@ -75,8 +75,6 @@ const uint8_t ALPHA_TO[] = {
 };
 
 int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
-  int retval;
-
   int deg_lambda, el, deg_omega;
   int i, j, r,k;
   uint8_t u,q,tmp,num1,num2,den,discr_r;
@@ -86,12 +84,12 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
   int syn_error, count;
 
   /* form the syndromes; i.e., evaluate data(x) at roots of g(x) */
-  for(i=0;i<NROOTS;i++)
+  for (i=0;i<NROOTS;i++)
     s[i] = data[0];
 
-  for(j=1;j<NN-PAD;j++){
-    for(i=0;i<NROOTS;i++){
-      if(s[i] == 0){
+  for (j=1;j<NN-PAD;j++) {
+    for (i=0;i<NROOTS;i++) {
+      if (s[i] == 0) {
         s[i] = data[j];
       } else {
         s[i] = data[j] ^ ALPHA_TO[MODNN(INDEX_OF[s[i]] + (FCR+i)*PRIM)];
@@ -101,7 +99,7 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
 
   /* Convert syndromes to index form, checking for nonzero condition */
   syn_error = 0;
-  for(i=0;i<NROOTS;i++){
+  for (i=0;i<NROOTS;i++) {
     syn_error |= s[i];
     s[i] = INDEX_OF[s[i]];
   }
@@ -123,7 +121,7 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
       u = MODNN(PRIM*(NN-1-eras_pos[i]));
       for (j = i+1; j > 0; j--) {
         tmp = INDEX_OF[lambda[j - 1]];
-        if(tmp != A0)
+        if (tmp != A0)
           lambda[j] ^= ALPHA_TO[MODNN(u + tmp)];
       }
     }
@@ -133,7 +131,7 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
        Needed only for decoder debugging. */
     
     /* find roots of the erasure location polynomial */
-    for(i=1;i<=no_eras;i++)
+    for (i=1;i<=no_eras;i++)
       reg[i] = INDEX_OF[lambda[i]];
 
     count = 0;
@@ -164,7 +162,7 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
 #endif
 #endif
   }
-  for(i=0;i<NROOTS+1;i++)
+  for (i=0;i<NROOTS+1;i++)
     b[i] = INDEX_OF[lambda[i]];
   
   /*
@@ -176,7 +174,7 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
   while (++r <= NROOTS) {        /* r is the step number */
     /* Compute discrepancy at the r-th step in poly-form */
     discr_r = 0;
-    for (i = 0; i < r; i++){
+    for (i = 0; i < r; i++) {
       if ((lambda[i] != 0) && (s[r-i-1] != A0)) {
         discr_r ^= ALPHA_TO[MODNN(INDEX_OF[lambda[i]] + s[r-i-1])];
       }
@@ -190,7 +188,7 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
       /* 7 lines below: T(x) <-- lambda(x) - discr_r*x*b(x) */
       t[0] = lambda[0];
       for (i = 0 ; i < NROOTS; i++) {
-        if(b[i] != A0)
+        if (b[i] != A0)
           t[i+1] = lambda[i+1] ^ ALPHA_TO[MODNN(discr_r + b[i])];
         else
           t[i+1] = lambda[i+1];
@@ -214,9 +212,9 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
 
   /* Convert lambda to index form and compute deg(lambda(x)) */
   deg_lambda = 0;
-  for(i=0;i<NROOTS+1;i++){
+  for (i=0;i<NROOTS+1;i++) {
     lambda[i] = INDEX_OF[lambda[i]];
-    if(lambda[i] != A0)
+    if (lambda[i] != A0)
       deg_lambda = i;
   }
   /* Find roots of the error+erasure locator polynomial by Chien search */
@@ -224,7 +222,7 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
   count = 0;                /* Number of roots of lambda(x) */
   for (i = 1,k=IPRIM-1; i <= NN; i++,k = MODNN(k+IPRIM)) {
     q = 1; /* lambda[0] is always 0 */
-    for (j = deg_lambda; j > 0; j--){
+    for (j = deg_lambda; j > 0; j--) {
       if (reg[j] != A0) {
         reg[j] = MODNN(reg[j] + j);
         q ^= ALPHA_TO[reg[j]];
@@ -241,7 +239,7 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
     /* If we've already found max possible roots,
      * abort the search to save time
      */
-    if(++count == deg_lambda)
+    if (++count == deg_lambda)
       break;
   }
   if (deg_lambda != count) {
@@ -249,7 +247,9 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
      * deg(lambda) unequal to number of roots => uncorrectable
      * error detected
      */
+#if (DEBUG >= 1)
     printf("deg_lambda != count \n");
+#endif
     count = -1;
     goto finish;
   }
@@ -258,9 +258,9 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
    * x**NROOTS). in index form. Also find deg(omega).
    */
   deg_omega = deg_lambda-1;
-  for (i = 0; i <= deg_omega;i++){
+  for (i = 0; i <= deg_omega;i++) {
     tmp = 0;
-    for(j=i;j >= 0; j--){
+    for (j=i;j >= 0; j--) {
       if ((s[i - j] != A0) && (lambda[j] != A0))
         tmp ^= ALPHA_TO[MODNN(s[i - j] + lambda[j])];
     }
@@ -282,7 +282,7 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
     
     /* lambda[i+1] for i even is the formal derivative lambda_pr of lambda[i] */
     for (i = MIN(deg_lambda,NROOTS-1) & ~1; i >= 0; i -=2) {
-      if(lambda[i+1] != A0)
+      if (lambda[i+1] != A0)
         den ^= ALPHA_TO[MODNN(lambda[i+1] + i * root[j])];
     }
 #if DEBUG >= 1
@@ -297,9 +297,10 @@ int8_t decode_rs_8(uint8_t *data, int *eras_pos, int no_eras) {
       data[loc[j]-PAD] ^= ALPHA_TO[MODNN(INDEX_OF[num1] + INDEX_OF[num2] + NN - INDEX_OF[den])];
     }
   }
- finish:
-  if(eras_pos != NULL){
-    for(i=0;i<count;i++)
+
+finish:
+  if (eras_pos != NULL) {
+    for (i=0;i<count;i++)
       eras_pos[i] = loc[i];
   }
 

@@ -11,8 +11,7 @@
 #define RS_SIZE        (320)
 #define DATA_SIZE      (256)
 #define FRAME_BITS    (2560)
-#define RS_BLOCK_SIZE  (255)
-#define RS_PADDING      (95)
+#define RS_BLOCK_SIZE  (160)
 
 extern const uint8_t Scrambler[320];
 

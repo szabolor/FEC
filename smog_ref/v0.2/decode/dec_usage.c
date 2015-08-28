@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include "dec_ref.h"
 
-#define DEBUG 1
-
 int main() {
   FILE *fp;
   uint8_t raw[RAW_SIZE];

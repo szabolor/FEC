@@ -6,29 +6,17 @@
  * see http://www.gnu.org/copyleft/lgpl.html
  */
 
+#include <stdlib.h>
 #include <memory.h>
 #include <x86intrin.h>
 #include "spiral-vit_v16-single.h"
-
-/* ==== include/mmalloc.h ==== */
-
-#ifndef MALLOC
-
-#if defined(_WIN32) || defined(_WIN64)
-#define MALLOC(a) _mm_malloc(a, 16)
-#else
-#include <malloc.h>
-#define MALLOC(a) memalign(16, a)
-#endif
-
-#endif
 
 /* ==== Verify_viterbi.h ==== */
 
 /* Determine parity of argument: 1 = odd, 0 = even */
 #ifdef __i386__
 
-static inline int parityb(uint8_t x){
+static inline int parityb(uint8_t x) {
   __asm__ __volatile__ ("test %1,%1;setpo %0" : "=g"(x) : "r" (x));
   return x;
 }
@@ -36,16 +24,16 @@ static inline int parityb(uint8_t x){
 #else
 void partab_init();
 
-static inline int parityb(uint8_t x){
+static inline int parityb(uint8_t x) {
   extern uint8_t Partab[256];
   extern int P_init;
-  if(!P_init){
+  if(!P_init) {
     partab_init();
   }
   return Partab[x];
 }
 
-static inline int parity(int x){
+static inline int parity(int x) {
   /* Fold down to one byte */
   x ^= (x >> 16);
   x ^= (x >> 8);
@@ -58,15 +46,15 @@ int P_init;
 /* Create 256-entry odd-parity lookup table
  * Needed only on non-ia32 machines
  */
-void partab_init(void){
+void partab_init(void) {
   int i,cnt,ti;
 
   /* Initialize parity lookup table */
-  for(i=0;i<256;i++){
+  for(i=0;i<256;i++) {
     cnt = 0;
     ti = i;
-    while(ti){
-      if(ti & 1)
+    while(ti) {
+      if (ti & 1)
   cnt++;
       ti >>= 1;
     }
@@ -340,7 +328,7 @@ int init_viterbi(void *p, int starting_state) {
   struct v *vp = p;
   int i;
 
-  if(p == NULL)
+  if (p == NULL)
     return -1;
   for(i=0;i<NUMSTATES;i++)
       vp->metrics1.t[i] = 63;
@@ -357,23 +345,24 @@ void *create_viterbi(int len) {
   struct v *vp;
   static int Init = 0;
 
-  if(!Init){
-    int state, i;
+  if (!Init) {
+    int state;
     int polys[RATE] = POLYS;
-    for(state=0;state < NUMSTATES/2;state++){
-      for (i=0; i<RATE; i++){
-        Branchtab[i*NUMSTATES/2+state] = (polys[i] < 0) ^ parity((2*state) & abs(polys[i])) ? 255 : 0;
-      }
+    for(state=0;state < NUMSTATES/2;state++) {
+      // hardcoded for RATE = 2
+      // use second polynomial in its inverted form (because of CCSDS standard)
+      Branchtab[state] = (polys[0] < 0) ^ parity((2*state) & abs(polys[0])) ? 255 : 0;
+      Branchtab[NUMSTATES/2+state] = (polys[1] < 0) ^ parity((2*state) & abs(polys[1])) ? 0 : 255; // inverted!!!
     }
     Init++;
   }
 
-  if(posix_memalign((void**)&p, 16,sizeof(struct v)))
+  if (posix_memalign((void**)&p, 16, sizeof(struct v)))
     return NULL;
 
   vp = (struct v *)p;
 
-  if(posix_memalign((void**)&vp->decisions, 16,(len+(K-1))*sizeof(decision_t))){
+  if (posix_memalign((void**)&vp->decisions, 16,(len+(K-1))*sizeof(decision_t))) {
     free(vp);
     return NULL;
   }
@@ -387,7 +376,7 @@ int chainback_viterbi(
       void *p,
       uint8_t *data, /* Decoded output data */
       uint16_t nbits, /* Number of data bits */
-      uint16_t endstate){ /* Terminal encoder state */
+      uint16_t endstate) { /* Terminal encoder state */
   struct v *vp = p;
   decision_t *d;
 
@@ -403,7 +392,7 @@ int chainback_viterbi(
 #define SUBSHIFT 0
 #endif
 
-  if(p == NULL)
+  if (p == NULL)
     return -1;
   d = vp->decisions;
   /* Make room beyond the end of the encoder register so we can
@@ -417,7 +406,7 @@ int chainback_viterbi(
    * combine in the cache anyway
    */
   d += (K-1); /* Look past tail */
-  while(nbits-- != 0){
+  while(nbits-- != 0) {
     int k;
     k = (d[nbits].w[(endstate>>ADDSHIFT)/32] >> ((endstate>>ADDSHIFT)%32)) & 1;
     endstate = (endstate >> 1) | (k << (K-2+ADDSHIFT));
@@ -427,10 +416,10 @@ int chainback_viterbi(
 }
 
 /* Delete instance of a Viterbi decoder */
-void delete_viterbi(void *p){
+void delete_viterbi(void *p) {
   struct v *vp = p;
 
-  if(vp != NULL){
+  if (vp != NULL) {
     free(vp->decisions);
     free(vp);
   }
@@ -441,13 +430,13 @@ void delete_viterbi(void *p){
  * of symbols!
  */
 
-int update_viterbi_blk(void *p, COMPUTETYPE *syms,int nbits){
+int update_viterbi_blk(void *p, COMPUTETYPE *syms,int nbits) {
   struct v *vp = p;
 
   decision_t *d;
   int s;
 
-  if(p == NULL)
+  if (p == NULL)
     return -1;
   d = (decision_t *)vp->decisions;
 

@@ -8,10 +8,7 @@
 #define FCR    112
 #define PRIM    11
 #define IPRIM  116
-//#define PAD     95
-#define PAD      0 
-// TODO: it's more efficient to use PAD in computation to avoid useless computation
-//       and more secure marking erasures at padded elements
+#define PAD     95
 
 #include <stdio.h>
 
