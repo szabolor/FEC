@@ -270,7 +270,13 @@ void encode_data_bit(uint8_t (*data)[256], uint8_t (*bit_encoded)[5200]) {
 
   // convert to bit format: simply put 0 and 1 to the corresponding byte
   for (i = 0; i < 5200; ++i) {
+#if (MSBFIRST == 1)
+    // MSB first
     (*bit_encoded)[i] = ( (encoded[i >> 3] & (1 << (7 - (i & 7)))) != 0 );
+#else
+    // LSB first
+    (*bit_encoded)[i] = ( (encoded[i >> 3] & (1 << (i & 7))) != 0 );
+#endif
   }
 }
 #endif
