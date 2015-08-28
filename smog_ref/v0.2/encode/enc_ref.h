@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define LOW_MEMORY        0 // low memory workaround to avoid LUT (and preserve 512byte)
-#define ENABLE_BIT_OUTPUT 1 // enable 
+#define LOW_MEMORY        1 // low memory workaround to avoid LUT (and preserve 512byte)
+#define ENABLE_BIT_OUTPUT 0 // enable 
 
 void encode_data(uint8_t (*data)[256], uint8_t (*encoded)[650]);
 
