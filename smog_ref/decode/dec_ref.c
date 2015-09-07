@@ -1,3 +1,13 @@
+/*
+ * Viterbi encoder based on SPIRAL (http://spiral.ece.cmu.edu/vitgen/) decoder
+ * Reed-Solonom decoder is Phil Karn work
+ */
+
+/*
+ * Revised and modified by szabolor
+ * 2015
+ */
+
 #include <stdlib.h>
 #include <stdint.h>
 #include "dec_ref.h"
