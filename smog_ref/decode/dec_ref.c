@@ -4,12 +4,6 @@
 #include "viterbi/spiral-vit_v16-single.h"
 #include "rs/decode_rs.h"
 
-#define DEBUG 0
-
-#if DEBUG > 0
-#include <stdio.h>
-#endif
-
 const uint8_t Scrambler[320] = {
   0xff, 0x48, 0x0e, 0xc0, 0x9a, 0x0d, 0x70, 0xbc, 0x8e, 0x2c, 0x93, 0xad, 0xa7, 0xb7, 0x46, 0xce,
   0x5a, 0x97, 0x7d, 0xcc, 0x32, 0xa2, 0xbf, 0x3e, 0x0a, 0x10, 0xf1, 0x88, 0x94, 0xcd, 0xea, 0xb1,
@@ -76,7 +70,7 @@ void viterbi(uint8_t (*conv)[CONV_SIZE], uint8_t (*dec_data)[RS_SIZE]) {
   delete_viterbi(vp);
 }
 
-void descramble(uint8_t (*dec_data)[RS_SIZE], uint8_t (*rs)[2][RS_BLOCK_SIZE]) {
+void descramble_and_deinterleave(uint8_t (*dec_data)[RS_SIZE], uint8_t (*rs)[2][RS_BLOCK_SIZE]) {
   uint16_t i;
   uint16_t j = 0;
 
@@ -101,31 +95,25 @@ void rs_decode(uint8_t (*rs)[2][RS_BLOCK_SIZE], uint8_t (*data)[DATA_SIZE], int8
 }
 
 void decode_data(uint8_t (*raw)[RAW_SIZE], uint8_t (*data)[DATA_SIZE], int8_t (*error)[2]) {
-#if DEBUG > 0
-  FILE *fp;
-#endif
   uint8_t conv[CONV_SIZE];
   uint8_t dec_data[RS_SIZE];
   uint8_t rs[2][RS_BLOCK_SIZE];
 
   deinterleave(raw, &conv);
   viterbi(&conv, &dec_data);
-  descramble(&dec_data, &rs);
+  descramble_and_deinterleave(&dec_data, &rs);
   rs_decode(&rs, data, error);
-  
-#if DEBUG > 0
-  fp = fopen("debug_conv", "wb");
-  fwrite(conv, sizeof(uint8_t), sizeof(conv), fp);
-  fclose(fp);
-  fp = fopen("debug_decdata", "wb");
-  fwrite(dec_data, sizeof(uint8_t), sizeof(dec_data), fp);
-  fclose(fp);
-  fp = fopen("debug_rs", "wb");
-  fwrite(rs, sizeof(uint8_t), sizeof(rs), fp);
-  fclose(fp);
-  printf("Errors: RS[0] = %d, RS[1] = %d\n", (*error)[0], (*error)[1]);
-  fp = fopen("debug_data", "wb");
-  fwrite((*data), sizeof(uint8_t), sizeof((*data)), fp);
-  fclose(fp);
-#endif
+}
+
+void decode_data_debug(uint8_t (*raw)[RAW_SIZE],        // Data to be decoded, 5200 byte (soft bit format)
+                       uint8_t (*data)[DATA_SIZE],      // Decoded data, 256 byte
+                       int8_t (*error)[2],              // RS decoder modules corrected errors or -1 if unrecoverable error happened
+                       uint8_t (*conv)[CONV_SIZE],      // Deinterleaved data with SYNC removed (5132 byte, soft bit format)
+                       uint8_t (*dec_data)[RS_SIZE],    // Viterbi decoder output (320 byte): two RS codeblock interleaved and scrambled(!)
+                       uint8_t (*rs)[2][RS_BLOCK_SIZE] // RS codeblocks without the leading padding 95 zeros
+                      ) {
+  deinterleave(raw, conv);
+  viterbi(conv, dec_data);
+  descramble_and_deinterleave(dec_data, rs);
+  rs_decode(rs, data, error);
 }
