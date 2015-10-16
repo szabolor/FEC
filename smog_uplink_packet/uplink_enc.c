@@ -2,12 +2,12 @@
 #include <string.h>
 #include "uplink_enc.h"
 
-static void scrambling(uint8_t (*out)[ENC_LEN]) {
+static void scrambling(uint8_t (*data)[ENC_LEN]) {
   int i;
   extern const uint8_t scrambler[ENC_LEN];
 
   for (i = 0; i < ENC_LEN; ++i) {
-    (*out)[i] ^= scrambler[i];
+    (*data)[i] ^= scrambler[i];
   }
 }
 
@@ -46,7 +46,7 @@ static void interleave(uint32_t (*before)[WORD_COUNT], uint8_t (*after)[ENC_LEN]
     base += 144;
     get_mask = 0x800000;
     for (k = 0; k < 24; ++k, get_mask >>= 1) {
-      if ((*before)[i] & get_mask) {
+      if ((*before)[i+1] & get_mask) {
         (*after)[base + 6 * k] |=  set_mask;
       }
     }
@@ -92,30 +92,31 @@ static inline uint32_t encode_word(uint32_t word) {
  */
 void encode_data(uint8_t (*in)[MSG_LEN], uint8_t (*out)[ENC_LEN]) {
   int i;
-  int j = 0;
+  int j;
   uint32_t tmp_array[WORD_COUNT] = {0};
   uint32_t tmp_data;
 
   // Process data in two-pass per loop 
   // (because of golay makes 12 bit wide data, so 3 byte => 2 golay word)
-  for (i = 0; i < MSG_LEN; i += 3) {
+  for (i = 0, j = 0; i < MSG_LEN; i += 3, j += 2) {
     // 2k-th golay data = { k*3-th message byte (8bit), k*3+1-th message byte upper half (4 bit) }
     tmp_data = ( (*in)[i] << 4 ) | ( ( (*in)[i+1] & 0xf0 ) >> 4 );
-    tmp_array[j++] = encode_word(tmp_data);
+    tmp_array[j] = encode_word(tmp_data);
     // 2k+1-th golay data = { k*3+1-th message byte lower half (4bit), k*3+2-th message byte (8 bit) }
     tmp_data = ( ( (*in)[i+1] & 0x0f ) << 8 ) | ( (*in)[i+2] );
-    tmp_array[j++] = encode_word(tmp_data);
+    tmp_array[j + 1] = encode_word(tmp_data);
   }
-/*
+
   for (i = 0; i < 10; ++i) {
     printf("i: %2d => 0x%08x\n", i, tmp_array[i]);
   }
-*/
+
   interleave(&tmp_array, out);
   scrambling(out);
 }
 
 
+// Only for testing purpose
 int main() {
   uint8_t in[MSG_LEN] = {0};
   uint8_t out[ENC_LEN] = {0};
@@ -136,3 +137,4 @@ int main() {
   }
 
 }
+
