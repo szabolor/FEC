@@ -2,6 +2,9 @@
 #include <string.h>
 #include "uplink_enc.h"
 
+/*
+ * To provide enough bit-flipping XOR data with a pseudo-random stream.
+ */
 static void scrambling(uint8_t (*data)[ENC_LEN]) {
   int i;
   extern const uint8_t scrambler[ENC_LEN];
@@ -35,7 +38,8 @@ static void interleave(uint32_t (*before)[WORD_COUNT], uint8_t (*after)[ENC_LEN]
     set_mask = 1 << (7 - ((i>>1) & 0x7));
     // printf("base=%d, get_mask=%06x, set_mask=%02x\n", base, get_mask, set_mask);
 
-    // Select a bit out of the total 24 bits MSB first and set the apropriate bit in `after`
+    // Select a bit out of the total 24 bits MSB first 
+    // and set the apropriate bit in `after`
     for (k = 0; k < 24; ++k, get_mask >>= 1) {
       if ((*before)[i] & get_mask) {
         (*after)[base + 6 * k] |=  set_mask; // & 0xff may be unnecessary
@@ -63,6 +67,7 @@ static inline uint32_t encode_word(uint32_t word) {
   int i;
   uint32_t x = word;
 
+  // Calculate syndrome
   for (i = 0; i < 12; ++i) {
     if (x & 1)
       x ^= GEN_POLY;
@@ -99,23 +104,26 @@ void encode_data(uint8_t (*in)[MSG_LEN], uint8_t (*out)[ENC_LEN]) {
   // Process data in two-pass per loop 
   // (because of golay makes 12 bit wide data, so 3 byte => 2 golay word)
   for (i = 0, j = 0; i < MSG_LEN; i += 3, j += 2) {
-    // 2k-th golay data = { k*3-th message byte (8bit), k*3+1-th message byte upper half (4 bit) }
+    // 2k-th golay data = { k*3-th message byte (8bit), 
+    //                      k*3+1-th message byte upper half (4 bit) }
     tmp_data = ( (*in)[i] << 4 ) | ( ( (*in)[i+1] & 0xf0 ) >> 4 );
     tmp_array[j] = encode_word(tmp_data);
-    // 2k+1-th golay data = { k*3+1-th message byte lower half (4bit), k*3+2-th message byte (8 bit) }
+
+    // 2k+1-th golay data = { k*3+1-th message byte lower half (4bit), 
+    //                        k*3+2-th message byte (8 bit) }
     tmp_data = ( ( (*in)[i+1] & 0x0f ) << 8 ) | ( (*in)[i+2] );
     tmp_array[j + 1] = encode_word(tmp_data);
   }
-
-  for (i = 0; i < 10; ++i) {
+/*
+  for (i = 0; i < WORD_COUNT; ++i) {
     printf("i: %2d => 0x%08x\n", i, tmp_array[i]);
   }
-
+*/
   interleave(&tmp_array, out);
   scrambling(out);
 }
 
-
+/*
 // Only for testing purpose
 int main() {
   uint8_t in[MSG_LEN] = {0};
@@ -137,4 +145,4 @@ int main() {
   }
 
 }
-
+*/
