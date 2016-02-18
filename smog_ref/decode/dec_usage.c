@@ -12,7 +12,7 @@ void test_decode_data() {
   fread(raw, sizeof(uint8_t), sizeof(raw), fp);
   fclose(fp);
  
-  decode_data(&raw, &data, &error);
+  decode_data(raw, data, error);
 
   printf("Errors: RS[0] = %d, RS[1] = %d\n", error[0], error[1]);
   fp = fopen("dec_data", "wb");
@@ -27,17 +27,34 @@ void test_decode_data_debug() {
   uint8_t dec_data[RS_SIZE];      // Viterbi output: RS blocks interleaved and scrambled
   uint8_t rs[2][RS_BLOCK_SIZE];   // RS blocks without leading padding zeros
   uint8_t data[DATA_SIZE];        // Decoded data
-  int8_t error[2];                // RS block decoded and corrected errors (or -1 if unrecoverable error occured)
+  int8_t  error[2];               // RS block decoded and corrected errors (or -1 if unrecoverable error occured)
 
   fp = fopen("fec", "rb");
   fread(raw, sizeof(uint8_t), sizeof(raw), fp);
   fclose(fp);
  
-  decode_data(&raw, &data, &error);
+  decode_data_debug(raw, data, error, conv, dec_data, rs);
 
   printf("Errors: RS[0] = %d, RS[1] = %d\n", error[0], error[1]);
-  fp = fopen("dec_data", "wb");
+  
+  fp = fopen("out_data", "wb");
   fwrite(data, sizeof(uint8_t), sizeof(data), fp);
+  fclose(fp);
+
+  fp = fopen("out_conv", "wb");
+  fwrite(conv, sizeof(uint8_t), sizeof(conv), fp);
+  fclose(fp);
+
+  fp = fopen("out_dec_data", "wb");
+  fwrite(dec_data, sizeof(uint8_t), sizeof(dec_data), fp);
+  fclose(fp);
+
+  fp = fopen("out_rs0", "wb");
+  fwrite(rs[0], sizeof(uint8_t), sizeof(rs[0]), fp);
+  fclose(fp);
+
+  fp = fopen("out_rs1", "wb");
+  fwrite(rs[1], sizeof(uint8_t), sizeof(rs[1]), fp);
   fclose(fp);
 }
 

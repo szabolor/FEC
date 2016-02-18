@@ -3,7 +3,7 @@
 
 #include <stdint.h> // uint8_t
 
-// #define DEBUG 2
+#define DEBUG
 
 #define RAW_SIZE      (5200)
 #define CONV_SIZE     (5132)
@@ -15,6 +15,10 @@
 
 extern const uint8_t Scrambler[320];
 
-void decode_data(uint8_t (*raw)[RAW_SIZE], uint8_t (*data)[DATA_SIZE], int8_t (*error)[2]);
+void decode_data(uint8_t raw[RAW_SIZE], uint8_t data[DATA_SIZE], int8_t error[2]);
+
+#ifdef DEBUG
+void decode_data_debug(uint8_t raw[RAW_SIZE], uint8_t data[DATA_SIZE], int8_t  error[2], uint8_t conv[CONV_SIZE], uint8_t dec_data[RS_SIZE], uint8_t rs[2][RS_BLOCK_SIZE]);
+#endif
 
 #endif

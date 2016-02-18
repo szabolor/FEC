@@ -46,7 +46,7 @@ const uint8_t Scrambler[320] = {
  *   viterbi decoder assumes non-inverted bits, so invert every second bit 
  *   by hand.
  */
-void deinterleave(uint8_t (*raw)[RAW_SIZE], uint8_t (*conv)[CONV_SIZE]) {
+void deinterleave(uint8_t raw[RAW_SIZE], uint8_t conv[CONV_SIZE]) {
   uint16_t i = 1;
   uint16_t j = 0;
 
@@ -54,17 +54,16 @@ void deinterleave(uint8_t (*raw)[RAW_SIZE], uint8_t (*conv)[CONV_SIZE]) {
     if (i >= RAW_SIZE) {
       i -= (RAW_SIZE - 1);
     }
-    (*conv)[j] = (*raw)[i];
+    conv[j] = raw[i];
     i += 80;
     ++j;
   }
 }
 
 /* Viterbi decoder:
- *
- *
+ *   It uses the one generated from http://www.spiral.net/
  */
-void viterbi(uint8_t (*conv)[CONV_SIZE], uint8_t (*dec_data)[RS_SIZE]) {
+void viterbi(uint8_t conv[CONV_SIZE], uint8_t dec_data[RS_SIZE]) {
   struct v *vp;
 
   if((vp = create_viterbi(FRAMEBITS)) == NULL){
@@ -74,54 +73,55 @@ void viterbi(uint8_t (*conv)[CONV_SIZE], uint8_t (*dec_data)[RS_SIZE]) {
 
   init_viterbi(vp, 0);
 
-  update_viterbi_blk(vp, (*conv), FRAMEBITS+(K-1));
-  chainback_viterbi(vp, (*dec_data), FRAMEBITS, 0);
+  update_viterbi_blk(vp, conv, FRAMEBITS+(K-1));
+  chainback_viterbi(vp, dec_data, FRAMEBITS, 0);
 
   delete_viterbi(vp);
 }
 
-void descramble_and_deinterleave(uint8_t (*dec_data)[RS_SIZE], uint8_t (*rs)[2][RS_BLOCK_SIZE]) {
+void descramble_and_deinterleave(uint8_t dec_data[RS_SIZE], uint8_t rs[2][RS_BLOCK_SIZE]) {
   uint16_t i;
   uint16_t j = 0;
 
   for (i = 0; i < RS_BLOCK_SIZE; ++i) {
-    (*rs)[0][i] = (*dec_data)[j] ^ Scrambler[j];
+    rs[0][i] = dec_data[j] ^ Scrambler[j];
     ++j;
-    (*rs)[1][i] = (*dec_data)[j] ^ Scrambler[j];
+    rs[1][i] = dec_data[j] ^ Scrambler[j];
     ++j;
   }
 }
 
-void rs_decode(uint8_t (*rs)[2][RS_BLOCK_SIZE], uint8_t (*data)[DATA_SIZE], int8_t (*error)[2]) {
+void rs_decode(uint8_t rs[2][RS_BLOCK_SIZE], uint8_t data[DATA_SIZE], int8_t error[2]) {
   uint16_t i;
 
-  (*error)[0] = decode_rs_8((*rs)[0], NULL, 0);
-  (*error)[1] = decode_rs_8((*rs)[1], NULL, 0);
+  error[0] = decode_rs_8(rs[0], NULL, 0);
+  error[1] = decode_rs_8(rs[1], NULL, 0);
 
   for (i = 0; i < DATA_SIZE; ++i) {
-    (*data)[i] = (*rs)[i & 1][i >> 1];
+    data[i] = rs[i & 1][i >> 1];
   }
 
 }
 
-void decode_data(uint8_t (*raw)[RAW_SIZE], uint8_t (*data)[DATA_SIZE], int8_t (*error)[2]) {
+void decode_data(uint8_t raw[RAW_SIZE], uint8_t data[DATA_SIZE], int8_t error[2]) {
   uint8_t conv[CONV_SIZE];
   uint8_t dec_data[RS_SIZE];
   uint8_t rs[2][RS_BLOCK_SIZE];
 
-  deinterleave(raw, &conv);
-  viterbi(&conv, &dec_data);
-  descramble_and_deinterleave(&dec_data, &rs);
-  rs_decode(&rs, data, error);
+  deinterleave(raw, conv);
+  viterbi(conv, dec_data);
+  descramble_and_deinterleave(dec_data, rs);
+  rs_decode(rs, data, error);
 }
 
-void decode_data_debug(uint8_t (*raw)[RAW_SIZE],        // Data to be decoded, 5200 byte (soft bit format)
-                       uint8_t (*data)[DATA_SIZE],      // Decoded data, 256 byte
-                       int8_t (*error)[2],              // RS decoder modules corrected errors or -1 if unrecoverable error happened
-                       uint8_t (*conv)[CONV_SIZE],      // Deinterleaved data with SYNC removed (5132 byte, soft bit format)
-                       uint8_t (*dec_data)[RS_SIZE],    // Viterbi decoder output (320 byte): two RS codeblock interleaved and scrambled(!)
-                       uint8_t (*rs)[2][RS_BLOCK_SIZE] // RS codeblocks without the leading padding 95 zeros
-                      ) {
+void decode_data_debug(
+    uint8_t raw[RAW_SIZE],        // Data to be decoded, 5200 byte (soft bit format)
+    uint8_t data[DATA_SIZE],      // Decoded data, 256 byte
+    int8_t  error[2],             // RS decoder modules corrected errors or -1 if unrecoverable error happened
+    uint8_t conv[CONV_SIZE],      // Deinterleaved data with SYNC removed (5132 byte, soft bit format)
+    uint8_t dec_data[RS_SIZE],    // Viterbi decoder output (320 byte): two RS codeblock interleaved and scrambled(!)
+    uint8_t rs[2][RS_BLOCK_SIZE]  // RS codeblocks without the leading padding 95 zeros
+  ) {
   deinterleave(raw, conv);
   viterbi(conv, dec_data);
   descramble_and_deinterleave(dec_data, rs);
