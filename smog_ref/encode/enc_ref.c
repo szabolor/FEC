@@ -29,7 +29,7 @@ static uint8_t Conv_sr;
 uint8_t *Interleaver;
 
 // memory workaround: to LUT or not to LUT...
-#if (LOW_MEMORY == 0)
+#ifndef LOW_MEMORY
   // No need for low memory, use LUT
   #define INDEX_OF(x) ( Index_of[ (x) ] )
   #define ALPHA_TO(x) ( Alpha_to[ (x) ] )
@@ -241,17 +241,17 @@ void encode_parity(void) {
  *             It holds the encoded data in byte format
  */ 
 
-void encode_data(uint8_t (*data)[256], uint8_t (*encoded)[650]) {
+void encode_data(uint8_t data[256], uint8_t encoded[650]) {
   uint16_t i;
 
   // Use already allocated array to store encoded data
-  Interleaver = (*encoded);
+  Interleaver = encoded;
 
   init_encoder();
   reset_encoder();
 
   for (i = 0; i < 256; ++i) {
-    encode_byte((*data)[i]);
+    encode_byte(data[i]);
   }
 
   for (i = 0; i < 64; ++i) {
@@ -260,22 +260,22 @@ void encode_data(uint8_t (*data)[256], uint8_t (*encoded)[650]) {
 }
 
 // for testing purpose enable built-in byte->bit converter
-#if (ENABLE_BIT_OUTPUT > 0)
-void encode_data_bit(uint8_t (*data)[256], uint8_t (*bit_encoded)[5200]) {
+#ifdef ENABLE_BIT_OUTPUT
+void encode_data_bit(uint8_t data[256], uint8_t bit_encoded[5200]) {
   uint8_t encoded[650] = {0};
   uint16_t i;
 
   // encode to byte format
-  encode_data(data, &encoded);
+  encode_data(data, encoded);
 
   // convert to bit format: simply put 0 and 1 to the corresponding byte
   for (i = 0; i < 5200; ++i) {
-#if (MSBFIRST == 1)
+#ifdef MSBFIRST
     // MSB first
-    (*bit_encoded)[i] = ( (encoded[i >> 3] & (1 << (7 - (i & 7)))) != 0 );
+    bit_encoded[i] = ( (encoded[i >> 3] & (1 << (7 - (i & 7)))) != 0 );
 #else
     // LSB first
-    (*bit_encoded)[i] = ( (encoded[i >> 3] & (1 << (i & 7))) != 0 );
+    bit_encoded[i] = ( (encoded[i >> 3] & (1 << (i & 7))) != 0 );
 #endif
   }
 }

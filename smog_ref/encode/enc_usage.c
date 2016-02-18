@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "enc_ref.h"
 
-#define SAVE_TO_FILE 1
+#define SAVE_TO_FILE
 
 uint8_t data[256] = {0};
 uint8_t encoded[650] = {0};
@@ -14,16 +14,16 @@ int message_len = 30;
 int main() {
   int i;
   uint8_t tmp;
-#if (SAVE_TO_FILE > 0)
+#ifdef SAVE_TO_FILE
   FILE *fp;
 #endif
 
   for (i = 0; i < message_len; ++i)
     data[i] = message[i];
 
-  encode_data(&data, &encoded);
+  encode_data(data, encoded);
 
-#if (SAVE_TO_FILE > 0)
+#ifdef SAVE_TO_FILE
   fp = fopen("test_enc", "wb");
   fwrite(encoded, 1, sizeof(encoded), fp);
   fclose(fp);
@@ -36,7 +36,7 @@ int main() {
   fclose(fp);
 #endif
 
-#if (ENABLE_BIT_OUTPUT > 0)
+#ifdef ENABLE_BIT_OUTPUT
   encode_data_bit(&data, &bit_encoded);
 
   fp = fopen("test_bit", "wb");
