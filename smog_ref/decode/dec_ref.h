@@ -1,17 +1,19 @@
 #ifndef DEC_REF_H
 #define DEC_REF_H
 
-#include <stdint.h> // uint8_t
+#include <stdint.h>
+#include "viterbi/spiral-vit_scalar.h"
+#include "rs/decode_rs.h"
 
 #define DEBUG
 
-#define RAW_SIZE      (5200)
-#define CONV_SIZE     (5132)
+#define RAW_SIZE      5200
+#define CONV_SIZE     5132
 
-#define RS_SIZE        (320)
-#define DATA_SIZE      (256)
-#define FRAME_BITS    (2560)
-#define RS_BLOCK_SIZE  (160)
+#define RS_SIZE        320
+#define DATA_SIZE      256
+#define FRAME_BITS    2560
+#define RS_BLOCK_SIZE  160
 
 extern const uint8_t Scrambler[320];
 

@@ -5,14 +5,13 @@
 
 /*
  * Revised and modified by szabolor
- * 2015
+ * 2015, 2016
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include "dec_ref.h"
-#include "viterbi/spiral-vit_v16-single.h"
-#include "rs/decode_rs.h"
 
 const uint8_t Scrambler[320] = {
   0xff, 0x48, 0x0e, 0xc0, 0x9a, 0x0d, 0x70, 0xbc, 0x8e, 0x2c, 0x93, 0xad, 0xa7, 0xb7, 0x46, 0xce,
@@ -65,6 +64,8 @@ void deinterleave(uint8_t raw[RAW_SIZE], uint8_t conv[CONV_SIZE]) {
  */
 void viterbi(uint8_t conv[CONV_SIZE], uint8_t dec_data[RS_SIZE]) {
   struct v *vp;
+  COMPUTETYPE conv_compute[CONV_SIZE];
+  int i;
 
   if((vp = create_viterbi(FRAMEBITS)) == NULL){
     printf("create_viterbi failed\n");
@@ -73,7 +74,14 @@ void viterbi(uint8_t conv[CONV_SIZE], uint8_t dec_data[RS_SIZE]) {
 
   init_viterbi(vp, 0);
 
-  update_viterbi_blk(vp, conv, FRAMEBITS+(K-1));
+  // COMPUTETYPE is set to uint32, so convert uint8 to uint32
+  // but the softbit value should be between 0 and 255 (!)
+  i = CONV_SIZE;
+  while (i--) {
+    conv_compute[i] = conv[i];
+  }
+
+  update_viterbi_blk(vp, conv_compute, FRAMEBITS+(K-1));
   chainback_viterbi(vp, dec_data, FRAMEBITS, 0);
 
   delete_viterbi(vp);
