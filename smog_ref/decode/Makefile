@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O3
+CFLAGS = -Wall -Wextra -O3 -std=c99
 LDFLAGS = -L. -ldecref
 RM = rm
 AR = ar
