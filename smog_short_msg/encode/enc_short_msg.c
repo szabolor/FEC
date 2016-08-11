@@ -89,7 +89,7 @@ static void interleave_symbol(uint8_t c) {
   }
 
   bit_count += INTERLEAVER_STEP_SIZE;
-  if (bit_count > INTERLEAVER_SIZE_BITS) {
+  if (bit_count >= INTERLEAVER_SIZE_BITS) {
     bit_count -= (INTERLEAVER_SIZE_BITS - 1);
   }
 }
@@ -180,25 +180,15 @@ void encode_short_data(uint8_t *data, uint8_t *encoded) {
     Interleaver[i] = 0;
   }
 
-  /*
+/*
   Put some (INTERLEAVER_STEP_SIZE) pilot bits here!
   Bits are: 11111110000111011110
   Pilot bits are located in beginning of every odd row, 
   thus one pilot bit occures by 12 byte of interleaved 
   data at the MSB position. Because there are 54 row and only 
   26 pilot bits, there is no pilot bit added to the last odd row (53rd).
-  */
+*/
   sr = 0x7f; // 7-bit shift register is used
-
-#if (INTERLEAVER_PILOT_BITS > INTERLEAVER_STEP_SIZE)
-#if (DEBUG_MODE >= 2)
-  printf("Interleaving first %d pilot bits...\n", INTERLEAVER_STEP_SIZE);
-#endif
-  for (i = 0; i < INTERLEAVER_STEP_SIZE; ++i) {
-    interleave_symbol(sr & 0x40);
-    sr = (sr << 1) | parity(sr & SYNC_POLY);
-  }
-#else
 #if (DEBUG_MODE >= 2)
   printf("Interleaving %d pilot bits...\n", INTERLEAVER_PILOT_BITS);
 #endif
@@ -206,7 +196,6 @@ void encode_short_data(uint8_t *data, uint8_t *encoded) {
     interleave_symbol(sr & 0x40);
     sr = (sr << 1) | parity(sr & SYNC_POLY);
   }
-#endif
 
 #if (DEBUG_MODE >= 2)
   printf("Encoding data...\n");
@@ -215,7 +204,9 @@ void encode_short_data(uint8_t *data, uint8_t *encoded) {
   for (j = 0; j < 128; ++j) {
     encode_byte(data[j]);
   }
-  
+
+/* // Useful if multiple separated pilot bits are required instead of
+   // a group of pilot bits per INTERLEAVER_STEP_SIZE
 #if (INTERLEAVER_PILOT_BITS > INTERLEAVER_STEP_SIZE)
 #if (DEBUG_MODE >= 2)
   printf("Interleaving remaining %d pilot bits...\n", INTERLEAVER_PILOT_BITS - INTERLEAVER_STEP_SIZE);
@@ -225,6 +216,7 @@ void encode_short_data(uint8_t *data, uint8_t *encoded) {
     sr = (sr << 1) | parity(sr & SYNC_POLY);
   }
 #endif
+*/
 
 #if (DEBUG_MODE >= 2)
   printf("Encoding parity...\n");
