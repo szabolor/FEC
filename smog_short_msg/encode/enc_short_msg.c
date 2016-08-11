@@ -9,22 +9,18 @@
  * 2015 - 2016
  */
 
+#ifdef DEBUG_MODE
+#include <stdio.h>
+#endif
+
 #include <stdint.h>
 #include "enc_short_msg.h"
 
-#define SYNC_POLY      0x48
-#define SCRAMBLER_POLY 0x95
-#define CPOLYA         0x4f // 79
-#define CPOLYB         0x6d // 109
-#define GF_POLY        0x187
-#define A0             255
-
 static const uint8_t RS_poly[] = {249,59,66,4,43,126,251,97,30,3,213,50,66,170,5,24};
 uint8_t RS_block[32];
-static uint8_t Bmask;
-static uint16_t Bindex;
-static uint8_t Scrambler;
-static uint8_t Conv_sr;
+static uint16_t bit_count;
+static uint8_t  Scrambler;
+static uint8_t  Conv_sr;
 uint8_t *Interleaver;
 
 #define INDEX_OF(x) ( Index_of[ (x) ] )
@@ -83,25 +79,18 @@ static inline uint8_t parity(uint8_t x) {
 /* 2566 bit -> 48 bit (6 byte) x 54 row
    (324 byte) - 26 spare bits are used as pilot bits */
 static void interleave_symbol(uint8_t c) {
-  if (c)
-    Interleaver[Bindex] |= Bmask;
-  else
-    Interleaver[Bindex] &= ~Bmask;
-
-  if ( ((Bindex % 6) == 0) && (Bindex < 306) ) {
-    // We have to deal with the interleaved pilot bits
-    Bindex += 12;
+#if (DEBUG_MODE >= 3)
+  printf("%4d: %3d - %02x > %d\n", bit_count, bit_count >> 3, ( 1 << ( 7 - (bit_count & 7) ) ), c != 0);
+#endif
+  if (c) {
+    Interleaver[bit_count >> 3] |= ( 1 << ( 7 - (bit_count & 7) ) );
   } else {
-    Bindex += 6;
+    Interleaver[bit_count >> 3] &= ~( 1 << ( 7 - (bit_count & 7) ) );
   }
 
-  if (Bindex >= 324) {
-    Bindex -= 324;
-    Bmask >>= 1;
-    if (Bmask == 0) {
-      Bmask = 0x80;
-      ++Bindex;
-    }
+  bit_count += INTERLEAVER_STEP_SIZE;
+  if (bit_count > INTERLEAVER_SIZE_BITS) {
+    bit_count -= (INTERLEAVER_SIZE_BITS - 1);
   }
 }
 
@@ -129,46 +118,6 @@ static void scramble_and_encode(uint8_t c) {
     Scrambler = (Scrambler << 1) | parity(Scrambler & SCRAMBLER_POLY);
   }
   encode_and_interleave(c, 8);
-}
-
-
-static void init_and_reset_encoder(void) {
-  uint8_t i;
-  uint16_t sr;
-
-  Conv_sr = 0;
-  Scrambler = 0xff;
-  /* 
-  Starting from the second 6-byte block, 
-  because there is a pilot bit already at the MSB bit of the first block!
-  */
-  Bmask = 0x80;
-  Bindex = 6;
-
-  for (i = 0; i < 32; ++i) {
-    RS_block[i] = 0;
-  }
-
-  // use `memset` if it's available through other otherwise required libraries
-  for (sr = 0; sr < 324; ++sr) {
-    Interleaver[sr] = 0;
-  }
-
-  /*
-  Put 26 pilot bits here!
-  Bits are: 11111110000111011110010110
-  Pilot bits are located in beginning of every odd row, 
-  thus one pilot bit occures by 12 byte of interleaved 
-  data at the MSB position. Because there are 54 row and only 
-  26 pilot bits, there is no pilot bit added to the last odd row (53rd).
-  */
-  sr = 0x7f; // 7-bit shift register is used
-  for (i = 0; i < 26; ++i) {
-    if (sr & 0x40) {
-      Interleaver[12*i] |= 0x80;
-    }
-    sr = (sr << 1) | parity(sr & SYNC_POLY);
-  }
 }
 
 static void encode_byte(uint8_t c){
@@ -206,28 +155,88 @@ static void encode_byte(uint8_t c){
  * Encoding data with the prevously described method
  *  - data:    exactly 128 byte sized uint8_t array
  *             It stores the data to be encoded
- *  - encoded: exactly 324 byte sized uint8_t array
+ *  - encoded: exactly INTERLEAVER_SIZE_BYTES byte sized uint8_t array
  *             It holds the encoded data in byte format
  */ 
 
 void encode_short_data(uint8_t *data, uint8_t *encoded) {
   uint16_t i;
+  uint16_t sr;
+  uint8_t j;
 
   // Use already allocated array to store encoded data
   Interleaver = encoded;
 
-  init_and_reset_encoder();
+  Conv_sr = 0;
+  Scrambler = 0xff;
+  bit_count = 0;
 
-  // RS code, convolutional code, scramble and interleave data
-  for (i = 0; i < 128; ++i) {
-    encode_byte(data[i]);
-  }
-
-  // Put the RS parity into convolutional code
   for (i = 0; i < 32; ++i) {
-    scramble_and_encode(RS_block[i]);
+    RS_block[i] = 0;
   }
 
+  // use `memset` if it's available through other otherwise required libraries
+  for (i = 0; i < INTERLEAVER_SIZE_BYTES; ++i) {
+    Interleaver[i] = 0;
+  }
+
+  /*
+  Put some (INTERLEAVER_STEP_SIZE) pilot bits here!
+  Bits are: 11111110000111011110
+  Pilot bits are located in beginning of every odd row, 
+  thus one pilot bit occures by 12 byte of interleaved 
+  data at the MSB position. Because there are 54 row and only 
+  26 pilot bits, there is no pilot bit added to the last odd row (53rd).
+  */
+  sr = 0x7f; // 7-bit shift register is used
+
+#if (INTERLEAVER_PILOT_BITS > INTERLEAVER_STEP_SIZE)
+#if (DEBUG_MODE >= 2)
+  printf("Interleaving first %d pilot bits...\n", INTERLEAVER_STEP_SIZE);
+#endif
+  for (i = 0; i < INTERLEAVER_STEP_SIZE; ++i) {
+    interleave_symbol(sr & 0x40);
+    sr = (sr << 1) | parity(sr & SYNC_POLY);
+  }
+#else
+#if (DEBUG_MODE >= 2)
+  printf("Interleaving %d pilot bits...\n", INTERLEAVER_PILOT_BITS);
+#endif
+  for (i = 0; i < INTERLEAVER_PILOT_BITS; ++i) {
+    interleave_symbol(sr & 0x40);
+    sr = (sr << 1) | parity(sr & SYNC_POLY);
+  }
+#endif
+
+#if (DEBUG_MODE >= 2)
+  printf("Encoding data...\n");
+#endif
+  // RS code, convolutional code, scramble and interleave data
+  for (j = 0; j < 128; ++j) {
+    encode_byte(data[j]);
+  }
+  
+#if (INTERLEAVER_PILOT_BITS > INTERLEAVER_STEP_SIZE)
+#if (DEBUG_MODE >= 2)
+  printf("Interleaving remaining %d pilot bits...\n", INTERLEAVER_PILOT_BITS - INTERLEAVER_STEP_SIZE);
+#endif
+  for (; i < INTERLEAVER_PILOT_BITS; ++i) {
+    interleave_symbol(sr & 0x40);
+    sr = (sr << 1) | parity(sr & SYNC_POLY);
+  }
+#endif
+
+#if (DEBUG_MODE >= 2)
+  printf("Encoding parity...\n");
+#endif
+  // Put the RS parity into convolutional code
+  for (j = 0; j < 32; ++j) {
+    scramble_and_encode(RS_block[j]);
+  }
+
+#if (DEBUG_MODE >= 2)
+  printf("Encoding tail bits...\n");
+#endif
   // Convolutional code tail bits (to put SR into all-0 state)
   encode_and_interleave(0, 6);
 }
@@ -235,14 +244,14 @@ void encode_short_data(uint8_t *data, uint8_t *encoded) {
 // for testing purpose enable built-in byte->bit converter
 #ifdef ENABLE_BIT_OUTPUT
 void encode_short_data_bit(uint8_t *data, uint8_t *bit_encoded) {
-  uint8_t encoded[324] = {0}; // TODO: this may only work with gcc (?!) 
+  uint8_t encoded[INTERLEAVER_SIZE_BYTES] = {0}; // TODO: this may only work with gcc (?!) 
                               // - but this is only a debug function
   uint16_t i;
   // encode to byte format
-  encode_data(data, encoded);
+  encode_short_data(data, encoded);
 
   // convert to bit format: simply put 0 and 1 to the corresponding byte
-  for (i = 0; i < (324*8); ++i) {
+  for (i = 0; i < (INTERLEAVER_SIZE_BYTES*8); ++i) {
 #ifdef MSBFIRST
     // MSB first
     bit_encoded[i] = ( (encoded[i >> 3] & (1 << (7 - (i & 7)))) != 0 );
