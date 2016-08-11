@@ -7,7 +7,7 @@ uint8_t data[128] = {0};
 uint8_t encoded[INTERLEAVER_SIZE_BYTES] = {0};
 
 #ifdef ENABLE_BIT_OUTPUT
-uint8_t bit_encoded[INTERLEAVER_SIZE_BITS] = {0};
+uint8_t tmp;
 #endif
 
 int main(int argc, char const *argv[]) {
@@ -34,14 +34,11 @@ int main(int argc, char const *argv[]) {
   }
 
 #ifdef ENABLE_BIT_OUTPUT
-  encode_short_data_bit(data, bit_encoded);
-
-  for (i = 0; i < INTERLEAVER_SIZE_BITS; ++i) {
-    bit_encoded[i] = bit_encoded[i] ? 0xD0 : 0x20;
-  }
-
   fp = fopen("encoded_bits", "wb");
-  fwrite(bit_encoded, 1, INTERLEAVER_SIZE_BITS, fp);
+  for (i = 0; i < INTERLEAVER_SIZE_BITS; ++i) {
+    tmp = (encoded[i >> 3] & (1 << (7 - (i & 7)))) ? 0xD0 : 0x20;
+    fwrite(&tmp, 1, sizeof(tmp), fp);
+  }
   fclose(fp);
 #endif
 
