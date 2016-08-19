@@ -2,62 +2,6 @@
 #include <string.h>
 #include "uplink_enc.h"
 
-/*
- * To provide enough bit-flipping XOR data with a pseudo-random stream.
- */
-static void scrambling(uint8_t (*data)[ENC_LEN]) {
-  int i;
-  extern const uint8_t scrambler[ENC_LEN];
-
-  for (i = 0; i < ENC_LEN; ++i) {
-    (*data)[i] ^= scrambler[i];
-  }
-}
-
-
-/*
- * Given the Golay (24,12) encoded data in before.
- * Arrange input data as a 48 bit (6 byte) * 48 (bit) square array.
- * Only the LSB 48 bit (6 byte) contains the golay codeword.
- * Transpose it and write to the `after` array line-by-line.
- */
-static void interleave(uint32_t (*before)[WORD_COUNT], uint8_t (*after)[ENC_LEN]) {
-  int i;
-  int k;
-  int base;
-  uint32_t get_mask;
-  uint8_t  set_mask;
-
-  memset((*after), 0, ENC_LEN);
-
-  // Select Golay codeword
-  for (i = 0; i < WORD_COUNT; i += 2) {
-
-    base = i >> 4;
-    get_mask = 0x800000;
-    set_mask = 1 << (7 - ((i>>1) & 0x7));
-    // printf("base=%d, get_mask=%06x, set_mask=%02x\n", base, get_mask, set_mask);
-
-    // Select a bit out of the total 24 bits MSB first 
-    // and set the apropriate bit in `after`
-    for (k = 0; k < 24; ++k, get_mask >>= 1) {
-      if ((*before)[i] & get_mask) {
-        (*after)[base + 6 * k] |=  set_mask; // & 0xff may be unnecessary
-      }
-    }
-    
-    // now the second 24 bit Golay codeword (shifted ENC_LEN/2)
-    base += 144;
-    get_mask = 0x800000;
-    for (k = 0; k < 24; ++k, get_mask >>= 1) {
-      if ((*before)[i+1] & get_mask) {
-        (*after)[base + 6 * k] |=  set_mask;
-      }
-    }
-    
-  }
-}
-
 
 /*
  * Given a 12bit width data "word".
@@ -65,7 +9,11 @@ static void interleave(uint32_t (*before)[WORD_COUNT], uint8_t (*after)[ENC_LEN]
  */
 static inline uint32_t encode_word(uint32_t word) {
   int i;
-  uint32_t x = word;
+  uint32_t x;
+
+  // just for precaution leave only the 12 data bits
+  word &= 0x000fff;
+  x = 0;
 
   // Calculate syndrome
   for (i = 0; i < 12; ++i) {
@@ -90,59 +38,80 @@ static inline uint32_t encode_word(uint32_t word) {
 
 
 /*
- * Given an `uint8_t in[144]` array as input data.
+ * Given an `uint8_t in[31]` array as input data.
  * Compute the interleaved and FEC coded output data.
- * Put the output to the `uint8_t out[288]` array (allocated outside 
+ * Put the output to the `uint8_t out[63]` array (allocated outside 
  * of this file)
  */
-void encode_data(uint8_t (*in)[MSG_LEN], uint8_t (*out)[ENC_LEN]) {
-  int i;
-  int j;
-  uint32_t tmp_array[WORD_COUNT] = {0};
-  uint32_t tmp_data;
+void encode_data(uint8_t data[MSG_LEN], uint8_t encoded[ENC_LEN]) {
+  int word_idx, data_idx, bit_idx; // used for indexing
+  unsigned int bit_counter = 0;    // used for interleaving
+  uint32_t current_word = 0;
 
-  // Process data in two-pass per loop 
-  // (because of golay makes 12 bit wide data, so 3 byte => 2 golay word)
-  for (i = 0, j = 0; i < MSG_LEN; i += 3, j += 2) {
-    // 2k-th golay data = { k*3-th message byte (8bit), 
-    //                      k*3+1-th message byte upper half (4 bit) }
-    tmp_data = ( (*in)[i] << 4 ) | ( ( (*in)[i+1] & 0xf0 ) >> 4 );
-    tmp_array[j] = encode_word(tmp_data);
+  memset(encoded, 0, ENC_LEN);
 
-    // 2k+1-th golay data = { k*3+1-th message byte lower half (4bit), 
-    //                        k*3+2-th message byte (8 bit) }
-    tmp_data = ( ( (*in)[i+1] & 0x0f ) << 8 ) | ( (*in)[i+2] );
-    tmp_array[j + 1] = encode_word(tmp_data);
+  // Encode every 12bit (1.5byte) into a 24bit (3byte) word
+  //              0          1          2
+  // data in: [aaaabbbb] [ccccdddd] [eeeeffff]
+  // encoded: [aaaabbbbdddd]    [cccceeeeffff]
+  //                 0                 1
+
+  for (word_idx = 0, data_idx = 0; word_idx < WORD_COUNT; ++word_idx) {
+  	current_word = 0;
+  	if (word_idx & 1) { // Odd words
+		// Current word := (In[data_idx] & 0xf0) << 4 | In[data_idx+1]
+		current_word = (((uint32_t) data[data_idx] & 0xf0) << 4) | ((uint32_t) data[data_idx+1]);
+		data_idx += 2;
+  	} else { // Even words
+  		// Current word := In[data_idx] << 4 | In[data_idx+1] & 0x0f
+  		current_word = ((uint32_t) data[data_idx] << 4) | ((uint32_t) data[data_idx+1] & 0x0f);
+  		++data_idx;
+  	}
+
+  	// Encode assembled 12 bit width data into Golay(24, 12) codeword!
+		current_word = encode_word(current_word);
+		
+		// Inlined interleaving:
+		// The interleaver forms a 24 row by 21 column matrix.
+		// It fills in the 21 encoded data word in the columns 
+		// and reads out by the rows
+		// TODO: can be unrolled, but the whole encoding has a very low 
+		// performance impact (0.01ms or 1ms is the same for this problem)
+		for (bit_idx = 0; bit_idx < 24; ++bit_idx) {
+			// interleave strating with LSB bit
+			if ( current_word & ( 1 << bit_idx ) ) {
+				// interleaved bit position is starting from LSB
+				encoded[bit_counter >> 3] |= ( 1 << (bit_counter & 7) );
+			} 
+			// don't handle when the bit is zero, because 
+			// the whole array is zero initialized
+
+			bit_counter += INTERLEAVER_STEP_SIZE;
+			if (bit_counter >= INTERLEAVER_SIZE) {
+				bit_counter -= (INTERLEAVER_SIZE - 1);
+			}
+		}
   }
-/*
-  for (i = 0; i < WORD_COUNT; ++i) {
-    printf("i: %2d => 0x%08x\n", i, tmp_array[i]);
-  }
-*/
-  interleave(&tmp_array, out);
-  scrambling(out);
 }
 
-/*
-// Only for testing purpose
+
 int main() {
-  uint8_t in[MSG_LEN] = {0};
-  uint8_t out[ENC_LEN] = {0};
-  char test_data[] = "Teszt szoveg!";
-  int i, j;
+	uint8_t data[MSG_LEN] = {'H', 'e', 'l', 'l', 'o', '!', 0};
+	uint8_t encoded[ENC_LEN] = {0};
+	int i;
 
-  for (i = 0; i < 13; ++i) {
-    in[i] = test_data[i];
-  }
+	encode_data(data, encoded);
 
-  encode_data(&in, &out);
+	for (i = 0; i < ENC_LEN; ++i) {
+		printf("%02x  ", encoded[i]);
+		if ((i & 0xf) == 0xf) {
+			printf("\n");
+		}
+	}
 
-  for (i = 0; i < 48; ++i) {
-    for (j = 0; j < 6; ++j) {
-      printf("%02x ", out[i*6+j]);
-    }
-    printf("\n");
-  }
+	if ((i & 0xf) == 0xf) {
+		printf("\n");
+	}
 
+	return 0;
 }
-*/
