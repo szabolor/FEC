@@ -1,4 +1,6 @@
+#if (DEBUG > 0)
 #include <stdio.h>
+#endif
 #include <string.h>
 #include "uplink_enc.h"
 
@@ -13,7 +15,7 @@ static inline uint32_t encode_word(uint32_t word) {
 
   // just for precaution leave only the 12 data bits
   word &= 0x000fff;
-  x = 0;
+  x = word;
 
   // Calculate syndrome
   for (i = 0; i < 12; ++i) {
@@ -70,7 +72,9 @@ void encode_data(uint8_t data[MSG_LEN], uint8_t encoded[ENC_LEN]) {
 
   	// Encode assembled 12 bit width data into Golay(24, 12) codeword!
 		current_word = encode_word(current_word);
-		
+#if (DEBUG > 0)
+		printf("[enc] %06x\n", current_word);
+#endif
 		// Inlined interleaving:
 		// The interleaver forms a 24 row by 21 column matrix.
 		// It fills in the 21 encoded data word in the columns 
@@ -94,7 +98,7 @@ void encode_data(uint8_t data[MSG_LEN], uint8_t encoded[ENC_LEN]) {
   }
 }
 
-
+#ifdef TEST_ENCODE
 int main() {
 	uint8_t data[MSG_LEN] = {'H', 'e', 'l', 'l', 'o', '!', 0};
 	uint8_t encoded[ENC_LEN] = {0};
@@ -115,3 +119,4 @@ int main() {
 
 	return 0;
 }
+#endif // TEST_ENCODE
