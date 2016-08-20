@@ -129,64 +129,64 @@ void decode_data(uint8_t *encoded, uint8_t *data, int *error_count, int *fatal) 
   memset(data, 0, MSG_LEN);
 
   for (word_idx = 0, data_idx = 0; word_idx < WORD_COUNT; ++word_idx) {
-  	current_word = 0;
+    current_word = 0;
 
-  	// Deinterleave
-		for (bit_idx = 0; bit_idx < 24; ++bit_idx) {
-			if (encoded[bit_counter >> 3] & ( 1 << (bit_counter & 7) ) ) {
-				current_word |= ( 1 << bit_idx );
-			} // it's already zero, so don't handle that!
+    // Deinterleave
+    for (bit_idx = 0; bit_idx < 24; ++bit_idx) {
+      if (encoded[bit_counter >> 3] & ( 1 << (bit_counter & 7) ) ) {
+        current_word |= ( 1 << bit_idx );
+      } // it's already zero, so don't handle that!
 
-			bit_counter += INTERLEAVER_STEP_SIZE;
-			if (bit_counter >= INTERLEAVER_SIZE) {
-				bit_counter -= (INTERLEAVER_SIZE - 1);
-			}
-		}
+      bit_counter += INTERLEAVER_STEP_SIZE;
+      if (bit_counter >= INTERLEAVER_SIZE) {
+        bit_counter -= (INTERLEAVER_SIZE - 1);
+      }
+    }
 
 
-  	// Decoding
-  	errs = correct_errors(&current_word);
+    // Decoding
+    errs = correct_errors(&current_word);
 #if (DEBUG > 1)
-  	printf("[dec] %06x\n", current_word);
+    printf("[dec] %06x\n", current_word);
 #endif
-  	if (errs > 3)
+    if (errs > 3)
       *fatal = 1;
     *error_count += errs;
 
     // Deinterleaving 12 bits to 8 bits (bytes)
 
-  	if (word_idx & 1) { // Odd words
-  		data[data_idx++] |= (current_word >> 4) & 0xf0;
-  		data[data_idx++] = current_word & 0xff;
-  	} else { // Even words
-  		// 0xff is not needed, just in case
-  		data[data_idx]   = (current_word >> 4) & 0xff;
-  		data[++data_idx] = current_word & 0x0f;
-  	}
+    if (word_idx & 1) { // Odd words
+      data[data_idx++] |= (current_word >> 4) & 0xf0;
+      data[data_idx++] = current_word & 0xff;
+    } else { // Even words
+      // 0xff is not needed, just in case
+      data[data_idx]   = (current_word >> 4) & 0xff;
+      data[++data_idx] = current_word & 0x0f;
+    }
   }
 }
 
 #ifdef TEST_DECODE
 int main() {
-	uint8_t data[MSG_LEN];
-	uint8_t encoded[ENC_LEN] = {0x0d,0x00,0x80,0x00,0x00,0x1c,0x00,0x00,0x03,0x00,0x00,0x00,0x00,0x14,0x00,0x80,0x01,0x00,0x28,0x00,0x00,0x00,0x00,0xc0,0x01,0x00,0x3c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  uint8_t data[MSG_LEN];
+  uint8_t encoded[ENC_LEN] = {0x0d,0x00,0x80,0x00,0x00,0x1c,0x00,0x00,0x03,0x00,0x00,0x00,0x00,0x14,0x00,0x80,0x01,0x00,0x28,0x00,0x00,0x00,0x00,0xc0,0x01,0x00,0x3c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
-	int i;
-	int error_count, fatal;
+  int i;
+  int error_count, fatal;
 
-	decode_data(encoded, data, &error_count, &fatal);
+  decode_data(encoded, data, &error_count, &fatal);
 
-	for (i = 0; i < MSG_LEN; ++i) {
-		printf("%02x ('%c')  ", data[i], data[i]);
-		if ((i & 0xf) == 0xf) {
-			printf("\n");
-		}
-	}
+  for (i = 0; i < MSG_LEN; ++i) {
+    printf("%02x ('%c')  ", data[i], data[i]);
+    if ((i & 0xf) == 0xf) {
+      printf("\n");
+    }
+  }
 
-	if ((i & 0xf) == 0xf) {
-		printf("\n");
-	}
+  if ((i & 0xf) == 0xf) {
+    printf("\n");
+  }
 
-	return 0;
+  return 0;
 }
 #endif // TEST_DECODE
