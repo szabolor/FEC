@@ -4,10 +4,11 @@
 #define GEN_POLY   (0xAE3U)
 
 // Data size to be encoded (interpreted as payload length) 
-// [MUST BE DIVISIBLE BY 3]
-#define MSG_LEN    (31)
+// only the first 31 byte and the LSB 4 bits of data[31] will
+// be coded!
+#define MSG_LEN    (32)
 
-// Encoder output size in bytes
+// Encoder output size in bytes [must be multiples of 3]
 #define ENC_LEN    (63)
 
 // The amount of Golay code-words: ceil(MSG_LEN/1.5)

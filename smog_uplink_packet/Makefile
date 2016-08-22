@@ -2,6 +2,7 @@ CC = gcc
 ARM = arm-none-eabi-
 
 CFLAGS = -Wall -Wextra -O2
+CFLAGS_DEBUG = -Wall -Wextra -g3 -O0 -ggdb
 CFLAGS_ARM_EXTRA = -mcpu=cortex-m4 -mthumb --specs=nosys.specs
 
 LDFLAGS = -L. -luplink_dec -luplink_enc
@@ -22,9 +23,6 @@ libuplink_dec_arm.o: uplink_dec.c
 
 usage: libuplink_enc libuplink_dec uplink_usage.c
 	$(CC) uplink_usage.c $(LDFLAGS) -o uplink_usage
-
-libuplink_enc: uplink_enc.o
-	$(AR) rcs libuplink_enc.a uplink_enc.o
 
 uplink_enc.o: uplink_enc.c
 	$(CC) $(CFLAGS) -c -fPIC uplink_enc.c -o uplink_enc.o

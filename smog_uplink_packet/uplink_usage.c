@@ -17,13 +17,14 @@ static const uint8_t BitsSetTable256[256] =
     B6(0), B6(1), B6(1), B6(2)
 };
 
-int test(int error_num) {
+void test(int error_num, int *sum_bit_error, int *fatal_count) {
   uint8_t data[MSG_LEN] = {'H', 'e', 'l', 'l', 'o', 0};
   uint8_t encoded[ENC_LEN];
   uint8_t decoded[MSG_LEN];
   int error_count, fatal, i, bit_error = 0;
 
 #ifdef PRINT_DATA
+  printf("input data:\n");
   for (i = 0; i < MSG_LEN; ++i) {
     data[i] = rand() & 0xff;
     printf("%02x ", data[i]);
@@ -34,6 +35,7 @@ int test(int error_num) {
   if ((i & 0x7) == 0x7) {
     printf("\n");
   }
+  printf("\n");
 #endif
 
 
@@ -53,16 +55,18 @@ int test(int error_num) {
   if ((i & 0x7) == 0x7) {
     printf("\n");
   }
+  printf("\n");
 #endif
 
   // Flip bits in the fashion as burst errors happens
-  for (i = error_num + 1; i > 0; --i) {
+  for (i = error_num; i > 0; --i) {
     encoded[(rand() % ENC_LEN)] ^= rand();
   }
 
   decode_data(encoded, decoded, &error_count, &fatal);
+  *fatal_count += fatal;
 #ifdef PRINT_DATA
-  printf("decoded data:\nerror_count: %d, fatal: %d\n", error_count, fatal);
+  printf("decoded data:\n");
   for (i = 0; i < MSG_LEN; ++i) {
 #ifdef HEXASCII 
     printf("%02x[%c] ", decoded[i], isprint(decoded[i]) ? decoded[i] : '.');
@@ -73,26 +77,28 @@ int test(int error_num) {
       printf("\n");
     }
   }
-
   if ((i & 0x7) == 0x7) {
     printf("\n");
   }
+  printf("error_count: %d, fatal: %d\n", error_count, fatal);
 #endif
 
 
   for (i = 0; i < MSG_LEN; ++i) {
     bit_error += BitsSetTable256[data[i] ^ decoded[i]];
   }
+  // compensate the last half byte (because of 31.5 encoded data)
+  bit_error -= BitsSetTable256[(data[MSG_LEN-1] ^ decoded[MSG_LEN-1]) & 0x0f];
 #ifdef PRINT_DATA
   printf("Bit error: %d\n", bit_error);
 #endif
 
-  return bit_error;
+  *sum_bit_error += bit_error;
 }
 
 int main(int argc, char const *argv[]) {
   int i, itercount, error_num, init_seed = 0;
-  int sum_bit_error = 0;
+  int sum_bit_error = 0, total_fatal = 0;
 
   if (argc > 1) {
       itercount = atoi(argv[1]);
@@ -116,13 +122,13 @@ usage:
 
   for (i = 0; i < itercount; ++i) {
 #ifdef PRINT_DATA
-    printf("\nTesting... [%d/%d]\n", i+1, itercount);
+    printf("\n === Testing [%d/%d] === \n", i+1, itercount);
 #endif
-    sum_bit_error += test(error_num);
+    test(error_num, &sum_bit_error, &total_fatal);
   }
 
-  printf("Summed bit error: %d (%f)\n", sum_bit_error,
-   ((double) sum_bit_error) / ((double) MSG_LEN * itercount * 8));
+  printf("Summed bit error: %d/%d (%f)\n", sum_bit_error, MSG_LEN * itercount * 8, ((double) sum_bit_error) / ((double) MSG_LEN * itercount * 8));
+  printf("Total packet errors: %d/%d (%f)\n", total_fatal, itercount, total_fatal / (double) itercount);
 
   return 0;
 }

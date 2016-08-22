@@ -40,7 +40,7 @@ static inline uint32_t encode_word(uint32_t word) {
 
 
 /*
- * Given an `uint8_t in[31]` array as input data.
+ * Given an `uint8_t in[32]` array as input data.
  * Compute the interleaved and FEC coded output data.
  * Put the output to the `uint8_t out[63]` array (allocated outside 
  * of this file)
@@ -48,7 +48,7 @@ static inline uint32_t encode_word(uint32_t word) {
 void encode_data(uint8_t data[MSG_LEN], uint8_t encoded[ENC_LEN]) {
   int word_idx, data_idx, bit_idx; // used for indexing
   unsigned int bit_counter = 0;    // used for interleaving
-  uint32_t current_word = 0;
+  uint32_t current_word;
 
   memset(encoded, 0, ENC_LEN);
 
@@ -61,9 +61,9 @@ void encode_data(uint8_t data[MSG_LEN], uint8_t encoded[ENC_LEN]) {
   for (word_idx = 0, data_idx = 0; word_idx < WORD_COUNT; ++word_idx) {
     current_word = 0;
     if (word_idx & 1) { // Odd words
-    // Current word := (In[data_idx] & 0xf0) << 4 | In[data_idx+1]
-    current_word = (((uint32_t) data[data_idx] & 0xf0) << 4) | ((uint32_t) data[data_idx+1]);
-    data_idx += 2;
+      // Current word := (In[data_idx] & 0xf0) << 4 | In[data_idx+1]
+      current_word = (((uint32_t) data[data_idx] & 0xf0) << 4) | ((uint32_t) data[data_idx+1]);
+      data_idx += 2;
     } else { // Even words
       // Current word := In[data_idx] << 4 | In[data_idx+1] & 0x0f
       current_word = ((uint32_t) data[data_idx] << 4) | ((uint32_t) data[data_idx+1] & 0x0f);
