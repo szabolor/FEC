@@ -47,11 +47,17 @@ static int correct_errors(uint32_t *word) {
   int i,j;
   uint32_t parity_bit;
   uint32_t s;
-  uint32_t cw = *word;
+/*  uint32_t cw = *word;
   int errs = 0;
 
   parity_bit = cw & PARITY_MASK;
+  (*word) &= LSB23BIT;*/
+  uint32_t cw;
+  int errs = 0;
+
+  parity_bit = (*word) & PARITY_MASK;
   (*word) &= LSB23BIT;
+  cw = *word;
 
   w = 3;
   j = -1;
