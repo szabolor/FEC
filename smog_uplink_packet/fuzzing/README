@@ -1,0 +1,20 @@
+Fuzzing:
+
+'uplink_fuzzing.c': 
+Only generate fuzzed inputs to be encoded and decoded
+
+
+'uplink_fuzzing_with_errors.c': 
+Generate fuzzed inputs and error patterns as well.
+Only correctable errors are introduced to check the ability of correcting them.
+
+
+TODO: create uncorrectable error report tests!
+
+
+Run the fuzzer:
+
+mkdir -p fuzzing/in
+mkdir -p fuzzing/out
+afl-gcc -o uplink_fuzzing_with_errors uplink_fuzzing_with_errors.c  uplink_dec.c uplink_enc.c -Wall
+afl-fuzz -i fuzzing/in/ -o fuzzing/out/ ./uplink_fuzzing_with_errors @@
